@@ -218,6 +218,15 @@ com3: enabled=false
 com4: enabled=false
 # 串行端口4：禁用
 
+gdbstub: enabled=1, port=1234, text_base=0, data_base=0, bss_base=0
+# 启用GDB调试功能
+
+magic_break: enabled=1
+# 启用magic_break功能
+
+debugger_log: C:/Users/huang/Desktop/Repository/HOS/VM/debuggerout.txt
+# 设置调试日志文件路径
+
 ```
 
 看着多，其实要改的不多，就这几项
