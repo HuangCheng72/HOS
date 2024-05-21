@@ -3,24 +3,33 @@
 # 汇编器和编译器
 NASM = nasm
 
-# 路径
+# 目录
 BOOT_DIR = boot
 
-# 文件
+# 源文件
 MBR_SRC = $(BOOT_DIR)/mbr.asm
+LOADER_SRC = $(BOOT_DIR)/loader.asm
+
+# 头文件
+BOOT_INCLUDE_DIR = $(BOOT_DIR)/include
 
 # 输出文件
 MBR_BIN = $(BOOT_DIR)/mbr.bin
+LOADER_BIN = $(BOOT_DIR)/loader.bin
 
 # 汇编标志
-ASM_FLAGS = -f bin
+ASM_FLAGS = -f bin -I $(BOOT_INCLUDE_DIR)/
 
 .PHONY: all
 
-all: $(MBR_BIN)
+all: $(MBR_BIN) $(LOADER_BIN)
 
 # 编译 mbr.bin
-$(MBR_BIN): $(MBR_SRC)
+$(MBR_BIN): $(MBR_SRC) $(BOOT_INCLUDE_DIR)/boot.inc
+	$(NASM) $(ASM_FLAGS) -o $@ $<
+
+# 编译 loader.bin
+$(LOADER_BIN): $(LOADER_SRC) $(BOOT_INCLUDE_DIR)/boot.inc
 	$(NASM) $(ASM_FLAGS) -o $@ $<
 
 # 清理规则

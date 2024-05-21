@@ -1,59 +1,109 @@
-;主引导程序
-;------------------------------------------------------------
+%include "boot.inc"
+; 加载配置，这样以后调整都方便
 SECTION MBR vstart=0x7c00
+; 入口地址0x7c00是MBR的惯例，BIOS只要发现MBR，一律加载到这个地址
+; 在开始就设置每个寄存器的初始值
    mov ax,cs
    mov ds,ax
    mov es,ax
    mov ss,ax
    mov fs,ax
+; cs一开始是0，设置ds、es、ss、fs四个都是0
    mov sp,0x7c00
+; sp存储的是栈顶指针，在MBR一开始必须是0x7c00（这本身也是MBR的加载位置，栈是向低地址处生长的，所以不会覆盖MBR的数据）
+   mov ax,0xb800
+; 0xb800，VGA时代对应显存的起始位置，放到gs寄存器里面
+   mov gs,ax
 
-; 清屏 利用0x06号功能，上卷全部行，则可清屏。
-; -----------------------------------------------------------
-;INT 0x10   功能号:0x06	   功能描述:上卷窗口
-;------------------------------------------------------
-;输入：
-;AH 功能号= 0x06
-;AL = 上卷的行数(如果为0,表示全部)
-;BH = 上卷行属性
-;(CL,CH) = 窗口左上角的(X,Y)位置
-;(DL,DH) = 窗口右下角的(X,Y)位置
-;无返回值：
-   mov     ax, 0x600
-   mov     bx, 0x700
-   mov     cx, 0           ; 左上角: (0, 0)
-   mov     dx, 0x184f	   ; 右下角: (80,25),
-			   ; VGA文本模式中,一行只能容纳80个字符,共25行。
-			   ; 下标从0开始,所以0x18=24,0x4f=79
-   int     0x10            ; int 0x10
+; 清屏
+   mov     ax, 0600h
+   mov     bx, 0700h
+   mov     cx, 0
+   mov     dx, 184fh
+   int     10h
 
-;;;;;;;;;    下面这三行代码是获取光标位置    ;;;;;;;;;
-;.get_cursor获取当前光标位置,在光标位置处打印字符.
-   mov ah, 3		; 输入: 3号子功能是获取光标位置,需要存入ah寄存器
-   mov bh, 0		; bh寄存器存储的是待获取光标的页号
+; 读入Loader
+   mov eax,LOADER_START_SECTOR	 ; 起始扇区lba地址
+   mov bx,LOADER_BASE_ADDR       ; 写入的地址
+   mov cx,4			 ; 待读入的扇区数
+   call rd_disk_m_16		 ; 以下读取程序的起始部分（一个扇区）
+   
 
-   int 0x10		; 输出: ch=光标开始行,cl=光标结束行
-			; dh=光标所在行号,dl=光标所在列号
+   jmp LOADER_BASE_ADDR
 
-;;;;;;;;;    获取光标位置结束    ;;;;;;;;;;;;;;;;
+;-------------------------------------------------------------------------------
+;功能:读取硬盘n个扇区，16位
+rd_disk_m_16:
+;-------------------------------------------------------------------------------
+    ; 参数说明：
+    ; eax = LBA扇区号
+    ; ebx = 将数据写入的内存地址
+    ; ecx = 读入的扇区数
 
-;;;;;;;;;     打印字符串    ;;;;;;;;;;;
-   ;还是用10h中断,不过这次是调用13号子功能打印字符串
-   mov ax, message
-   mov bp, ax		; es:bp 为串首地址, es此时同cs一致，
-			; 开头时已经为sreg初始化
+    mov esi, eax          ; 备份eax，保存LBA扇区号
+    mov di, cx            ; 备份cx，保存要读取的扇区数
 
-   ; 光标位置要用到dx寄存器中内容,cx中的光标位置可忽略
-   mov cx, 5		; cx 为串长度,不包括结束符0的字符个数
-   mov ax, 0x1301	; 子功能号13是显示字符及属性,要存入ah寄存器,
-			; al设置写字符方式 ah=01: 显示字符串,光标跟随移动
-   mov bx, 0x2		; bh存储要显示的页号,此处是第0页,
-			; bl中是字符属性, 属性黑底绿字(bl = 02h)
-   int 0x10		; 执行BIOS 0x10 号中断
-;;;;;;;;;      打字字符串结束	 ;;;;;;;;;;;;;;;
+    ; 第1步：设置要读取的扇区数
+    mov dx, SECTOR_COUNT_REG ; 选择扇区计数寄存器端口
+    mov al, cl            ; 将要读取的扇区数放入al
+    out dx, al            ; 输出到扇区计数寄存器
 
-   jmp $		; 使程序悬停在此
+    mov eax, esi          ; 恢复eax，包含LBA扇区号
 
-   message db "1 MBR"
-   times 510-($-$$) db 0
-   db 0x55,0xaa
+    ; 第2步：将LBA地址存入0x1f3 ~ 0x1f6
+
+    ; LBA地址7~0位写入端口SECTOR_NUM_REG
+    mov dx, SECTOR_NUM_REG
+    out dx, al
+
+    ; LBA地址15~8位写入端口CYL_LOW_REG
+    mov cl, 8
+    shr eax, cl
+    mov dx, CYL_LOW_REG
+    out dx, al
+
+    ; LBA地址23~16位写入端口CYL_HIGH_REG
+    shr eax, cl
+    mov dx, CYL_HIGH_REG
+    out dx, al
+
+    ; LBA地址27~24位写入端口DRIVE_HEAD_REG
+    shr eax, cl
+    and al, 0x0f       ; 只保留LBA地址的低4位
+    or al, 0xe0        ; 设置7~4位为1110，表示LBA模式
+    mov dx, DRIVE_HEAD_REG
+    out dx, al
+
+    ; 第3步：向STATUS_CMD_REG端口写入读命令，0x20
+    mov dx, STATUS_CMD_REG
+    mov al, 0x20
+    out dx, al
+
+    ; 第4步：检测硬盘状态
+    .not_ready:
+        nop
+        in al, dx
+        and al, 0x88       ; 检查硬盘控制器状态：第4位为1表示准备好数据传输，第7位为1表示硬盘忙
+        cmp al, 0x08
+        jnz .not_ready     ; 若未准备好，继续等待
+
+    ; 第5步：从DATA_REG端口读数据
+    mov ax, di
+    mov dx, 256
+    mul dx
+    mov cx, ax         ; di为要读取的扇区数，一个扇区有512字节，每次读入一个字，共需di*512/2次
+    mov dx, DATA_REG
+    .go_on_read:
+        in ax, dx
+        mov [bx], ax
+        add bx, 2
+        loop .go_on_read
+        ret
+
+times 510-($-$$) db 0
+; 这行代码的作用是填充当前代码段，使其总长度达到510字节。
+; MBR的总大小是512字节，其中最后两个字节是固定的引导标识符 0x55 和 0xAA，所以需要填充前面的字节。
+; $ 表示当前地址，$$ 表示当前段的起始地址，($-$$) 计算出当前代码段的大小，然后 510-($-$$) 计算出需要填充的字节数。
+; 用 db 0 填充这些字节。
+
+db 0x55,0xaa		; 这两个字节是引导记录的标识符，表示这是一个有效的MBR。
