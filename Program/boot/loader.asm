@@ -27,7 +27,7 @@ VIDEO_DESC:
 
 GDT_SIZE equ $ - GDT_BASE
 GDT_LIMIT equ GDT_SIZE - 1 
-times 16 dq 0  ; 预留16个描述符的空位，多了容易超出Loader所在的内存段，我这里用作者原版的60个描述符直接超出本段了，建议缩小一点
+times 28 dq 0  ; 预留28个描述符空位，加上已有的4个，一共是32个描述符，每个描述符8个字节，总共是32 * 8 = 256字节
 
 ; 选择子
 SELECTOR_CODE equ (0x0001 << 3) + TI_GDT + RPL0  ; 代码段选择子
