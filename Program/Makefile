@@ -14,6 +14,9 @@ MAKE = make
 BOOT_DIR = boot
 KERNEL_DIR = kernel
 
+# 参与链接的所有文件
+ALL_OBJS = $(KERNEL_DIR)/kernel.o $(KERNEL_DIR)/kernel_func.o
+
 # 输出文件
 KERNEL_BIN = $(KERNEL_DIR)/kernel.bin
 
@@ -29,7 +32,7 @@ LDFLAGS = -T $(KERNEL_LINKER_SCRIPT) --oformat binary
 all:
 	$(MAKE) -C $(BOOT_DIR) NASM=$(NASM)
 	$(MAKE) -C $(KERNEL_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS)
-	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(KERNEL_DIR)/kernel.o $(KERNEL_DIR)/kernel_func.o
+	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(ALL_OBJS)
 
 
 clean:
