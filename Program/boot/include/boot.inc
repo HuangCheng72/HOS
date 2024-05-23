@@ -3,6 +3,9 @@
 LOADER_BASE_ADDR    equ 0x900   ; 定义加载器的基址
 LOADER_START_SECTOR equ 0x2     ; 定义加载器的起始扇区
 
+KERNEL_BASE_ADDR    equ 0x1500  ; 定义内核的基址
+KERNEL_START_SECTOR equ 0x9     ; 定义内核的起始扇区
+
 ;---------------    硬盘寄存器   -------------------
 ; Primary 通道
 DATA_REG          equ 0x1f0  ; 数据寄存器

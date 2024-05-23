@@ -28,6 +28,11 @@ SECTION MBR vstart=0x7c00
    mov cx,4			 ; 待读入的扇区数
    call rd_disk_m_16		 ; 以下读取程序的起始部分（一个扇区）
    
+; 读入Kernel，200个扇区足够大了
+   mov eax,KERNEL_START_SECTOR	 ; 起始扇区lba地址
+   mov bx,KERNEL_BASE_ADDR       ; 写入的地址
+   mov cx,16			 ; 待读入的扇区数
+   call rd_disk_m_16		 ; 以下读取程序的起始部分（一个扇区）
 
    jmp LOADER_BASE_ADDR
 
