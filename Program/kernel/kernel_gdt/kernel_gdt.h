@@ -59,7 +59,6 @@ typedef struct {
 
 
 #define GDT_BASE_ADDR 0x903             // gdt在内存中的起始地址
-#define GDT_PTR_ADDR 0xa03              // gdt_ptr在内存中的地址
 #define HIGH_ADDR_OFFSET 0xc0000000     // 往高地址的偏移量
 
 // 调整GDT到高地址处（内核所在的虚拟地址上）

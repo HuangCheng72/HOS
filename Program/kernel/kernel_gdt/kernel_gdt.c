@@ -21,11 +21,6 @@ void setup_gdt() {
     (gdt + 3)->granularity = (DESC_G_4K | DESC_D_32);
     (gdt + 3)->base_high = 0xc0;    // 加上偏移量0xc0000000，从虚拟内存可以映射到物理内存，这也是调整视频段的基址
 
-    // 设置GDT指针
-    GdtPtr *gdt_ptr = (GdtPtr *)(GDT_PTR_ADDR);
-    // limit就别动它了，用不上
-    gdt_ptr->base += HIGH_ADDR_OFFSET;   // 基地址加上0xC0000000
-
     // 用虚拟地址重新加载GDT
     load_gdt(GDT_PTR_ADDR + HIGH_ADDR_OFFSET);
 
