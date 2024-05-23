@@ -13,9 +13,7 @@ MAKE = make
 # 所有组件目录
 BOOT_DIR = boot
 KERNEL_DIR = kernel
-
-# 参与链接的所有文件
-ALL_OBJS = $(KERNEL_DIR)/kernel.o $(KERNEL_DIR)/kernel_func.o
+LIB_DIR = lib
 
 # 输出文件
 KERNEL_BIN = $(KERNEL_DIR)/kernel.bin
@@ -29,12 +27,20 @@ LDFLAGS = -T $(KERNEL_LINKER_SCRIPT) --oformat binary
 .PHONY: all
 
 # 编译各组件，要把工具参数传输过去，然后主Makefile汇总链接生成 kernel.bin
-all:
+all: compile link
+
+# 编译各组件
+compile:
 	$(MAKE) -C $(BOOT_DIR) NASM=$(NASM)
-	$(MAKE) -C $(KERNEL_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS)
-	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(ALL_OBJS)
+	$(MAKE) -C $(LIB_DIR) NASM=$(NASM)
+	$(MAKE) -C $(KERNEL_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+
+# 链接生成 kernel.bin
+link:
+	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(wildcard $(KERNEL_DIR)/*.o) $(wildcard $(LIB_DIR)/*.o)
 
 
 clean:
 	$(MAKE) -C $(BOOT_DIR) clean
 	$(MAKE) -C $(KERNEL_DIR) clean
+	$(MAKE) -C $(LIB_DIR) clean
