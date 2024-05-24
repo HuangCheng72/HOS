@@ -19,5 +19,11 @@ extern void store_gdt(uint32_t gdt_ptr_addr);
 extern void load_gdt(uint32_t gdt_ptr_addr);
 // 设置esp
 extern void switch_esp_virtual_addr();
+// 将一个字符打印在光标处
+void put_char(char c);
+//在光标位置打印字符串（长度不要超过屏幕一行能容纳的最多字符数80）
+void put_str(const char *str);
+//将整数以16进制形式打印在屏幕上，不打印前缀0x
+void put_int(int n);
 
 #endif //HOS_LIB_H

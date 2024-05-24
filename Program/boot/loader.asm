@@ -98,7 +98,7 @@ p_mode_start:
     mov gs, ax  ; 设置GS段寄存器
 
     call get_memory
-    mov byte [gs:160], 'P'  ; 在屏幕位置(0,10)处写入字符'P'
+    ;mov byte [gs:160], 'P'  ; 在屏幕位置(0,10)处写入字符'P'
     
     jmp KERNEL_BASE_ADDR
 
