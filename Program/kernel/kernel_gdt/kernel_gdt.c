@@ -17,8 +17,15 @@ void setup_gdt() {
     (gdt + 3)->limit_low = 0x7fff;
     (gdt + 3)->base_low = 0x8000;
     (gdt + 3)->base_mid = 0x0B;
-    (gdt + 3)->access = (0x92); // 数据段, DPL=0, 存在位=1
-    (gdt + 3)->granularity = (DESC_G_4K | DESC_D_32);
+    (gdt + 3)->type = DESC_TYPE_DATA;
+    (gdt + 3)->s = DESC_S_CODE_OR_DATA;
+    (gdt + 3)->dpl = DESC_DPL0;
+    (gdt + 3)->p = DESC_PRESENT;
+    (gdt + 3)->limit_high = 0;
+    (gdt + 3)->avl = DESC_AVL;
+    (gdt + 3)->l = DESC_LONG_MODE;
+    (gdt + 3)->db = DESC_DB;
+    (gdt + 3)->g = DESC_G_4K;
     (gdt + 3)->base_high = 0xc0;    // 加上偏移量0xc0000000，从虚拟内存可以映射到物理内存，这也是调整视频段的基址
 
     // 用虚拟地址重新加载GDT
