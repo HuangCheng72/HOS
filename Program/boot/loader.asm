@@ -80,7 +80,6 @@ loader_start:
     lgdt [gdt_ptr]  ; 加载GDT指针到GDTR寄存器
 
 ;-----------------  将CR0第0位置1  ----------------
-    cli            ; 关闭中断
     mov eax, cr0  ; 读取CR0寄存器的值到EAX
     or eax, 0x00000001  ; 设置CR0的PE位（第0位）
     mov cr0, eax  ; 写回CR0寄存器，启用保护模式
