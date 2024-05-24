@@ -57,8 +57,8 @@ typedef struct {
 // 1MB 换算成十六进制是 0x100000，低于这个的我们就预留给内核、MBR、Loader使用
 // 在之前的设计里面0到0x900给了栈，0x900到0x1500给了MBR，0x1500往后留给内核
 
-
 #define GDT_BASE_ADDR 0x903             // gdt在内存中的起始地址
+#define GDT_PTR_ADDR 0xa03              // gdt_ptr在内存中的地址
 #define HIGH_ADDR_OFFSET 0xc0000000     // 往高地址的偏移量
 
 // 调整GDT到高地址处（内核所在的虚拟地址上）
