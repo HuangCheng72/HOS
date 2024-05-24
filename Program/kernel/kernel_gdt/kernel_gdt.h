@@ -9,6 +9,9 @@
 #define DESC_TYPE_DATA 0x2          // 数据段类型
 #define DESC_S_CODE_OR_DATA 1       // 描述符类型 (1=代码或数据)
 #define DESC_DPL0 0x0               // 特权级 0
+#define DESC_DPL1 0x1               // 特权级 1
+#define DESC_DPL2 0x2               // 特权级 2
+#define DESC_DPL3 0x3               // 特权级 3
 #define DESC_PRESENT 1              // 段存在位
 #define DESC_AVL 0                  // 可用位
 #define DESC_LONG_MODE 0            // 不是64位代码段
