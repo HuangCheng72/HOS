@@ -53,7 +53,9 @@ void setup_page_directory(page_directory_entry_t* page_directory) {
         first_page_table[i].present = 1;     // 页表项存在
         first_page_table[i].rw = 1;          // 页表项可读写
         first_page_table[i].us = 1;          // 页表项为用户权限
-        first_page_table[i].frame = i;       // 页框地址，物理地址右移12位
+
+        first_page_table[i].frame = (i * 0x1000) >> 12;       // 页框地址，物理地址右移12位
+        // 等效于 first_page_table[i].frame = i，但这才是完整的计算逻辑
     }
 
     // 设置页目录表第768到1023个条目，映射高地址内存 (从3GB开始)
