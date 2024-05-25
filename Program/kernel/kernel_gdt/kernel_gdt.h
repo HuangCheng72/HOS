@@ -45,10 +45,11 @@ typedef struct {
 } SegmentDescriptor;
 
 // GDT指针结构体形式
+// 不能直接用，仅供参考，会有编译器自动内存对齐问题，要加上禁止内存自动对齐的__attribute__((packed))关键字
 typedef struct {
     uint16_t limit;      // 段界限
     uint32_t base;       // 段基址
-} GdtPtr;
+} __attribute__((packed)) GdtPtr;
 
 // 1MB 换算成十六进制是 0x100000，低于这个的我们就预留给内核、MBR、Loader使用
 // 在之前的设计里面0到0x900给了栈，0x900到0x1500给了MBR，0x1500往后留给内核

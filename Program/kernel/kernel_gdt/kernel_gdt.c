@@ -6,9 +6,6 @@
 
 void setup_gdt() {
 
-    // 再把GDT的值存储好
-    store_gdt(GDT_PTR_ADDR);
-
     // GDT表所在位置
     SegmentDescriptor *gdt = (SegmentDescriptor *)GDT_BASE_ADDR;
 
@@ -29,6 +26,6 @@ void setup_gdt() {
     (gdt + 3)->base_high = 0xc0;    // 加上偏移量0xc0000000，从虚拟内存可以映射到物理内存，这也是调整视频段的基址
 
     // 用虚拟地址重新加载GDT
-    load_gdt(GDT_PTR_ADDR + HIGH_ADDR_OFFSET);
+    load_gdt(32 * 8 - 1, GDT_BASE_ADDR + HIGH_ADDR_OFFSET);
 
 }
