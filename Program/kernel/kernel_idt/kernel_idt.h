@@ -50,7 +50,7 @@ typedef struct {
 
 // 一个IDT描述符的大小是8字节
 // 一般来说中断挺多的，要预留多一些，256个就很多了
-// 不过我们也不考虑那么多，预留128个位置已经很充足了
+// 不过我们也不考虑那么多，预留256个位置已经很充足了
 // 那么段界限就是 8 * 256 - 1 = 2047，十六进制下，2048是0x800
 // 0x6000 + 0x800 = 0x6800
 
@@ -76,25 +76,70 @@ typedef struct {
 // 它分主从两片PIC（master-slave），从片PIC连接到主片的一个管脚，从PIC发出的中断，通过主PIC的IRQ2中断提醒CPU
 // 实际上CPU不知道从PIC发出了中断，只是IRQ2中断的发生的时候，它才去读从PIC到底发生了什么
 // PIC自己其实也有寄存器，存放待处理的数据，我们通过其数据端口去读，通过其端口去写。
+
 #define PIC_M_CTRL 0x20	       // 主PIC的控制端口是0x20
 #define PIC_M_DATA 0x21	       // 主PIC的数据端口是0x21
 #define PIC_S_CTRL 0xa0	       // 从PIC的控制端口是0xa0
 #define PIC_S_DATA 0xa1	       // 从PIC的数据端口是0xa1
 
-// 给PIC的IMR写的数据，转换成结构体位域的形式
-// 主片IMR的结构体
+// PIC_ICW1 结构体形式
+typedef struct {
+    uint8_t init : 1;               // 开始初始化为1
+    uint8_t single : 1;             // 级联模式（0）或单片模式（1）
+    uint8_t interval4 : 1;          // 中断向量号的调用地址间隔是否为4，1为4字节，0为8字节（看你的一个中断描述符多大）
+    uint8_t level_triggered : 1;    // 边沿触发模式（0）或电平触发模式（1）
+    uint8_t needs_icw4 : 1;         // 是否需要ICW4（1表示需要）
+    uint8_t reserved : 3;           // 保留位，固定为0
+} PIC_ICW1;
+
+// PIC_ICW2 结构体形式
+typedef struct {
+    uint8_t offset;                 // 中断向量偏移量（在IDT中的下标）
+} PIC_ICW2;
+
+// 主 PIC 的 PIC_ICW3 结构体形式
+typedef struct {
+    uint8_t slave_on_ir0 : 1;       // IR0 连接从 PIC（1 表示连接）
+    uint8_t slave_on_ir1 : 1;       // IR1 连接从 PIC（1 表示连接）
+    uint8_t slave_on_ir2 : 1;       // IR2 连接从 PIC（1 表示连接）
+    uint8_t slave_on_ir3 : 1;       // IR3 连接从 PIC（1 表示连接）
+    uint8_t slave_on_ir4 : 1;       // IR4 连接从 PIC（1 表示连接）
+    uint8_t slave_on_ir5 : 1;       // IR5 连接从 PIC（1 表示连接）
+    uint8_t slave_on_ir6 : 1;       // IR6 连接从 PIC（1 表示连接）
+    uint8_t slave_on_ir7 : 1;       // IR7 连接从 PIC（1 表示连接）
+} PIC_ICW3_Master;
+
+// 从 PIC 的 PIC_ICW3 结构体形式
+typedef struct {
+    uint8_t cascade_identity : 3;   // 连接到主 PIC 的 IR 线编号
+    uint8_t reserved : 5;           // 保留位，固定为0
+} PIC_ICW3_Slave;
+
+// PIC_ICW4 结构体形式
+typedef struct {
+    uint8_t mode_8086 : 1;              // 8086/88 模式（1 表示使用 8086 模式）
+    uint8_t auto_eoi : 1;               // 自动EOI（1 表示使用自动EOI）
+    uint8_t buffered : 1;               // 缓冲模式（1 表示使用缓冲模式）
+    uint8_t master_slave : 1;           // 主PIC（0）或从PIC（1），仅缓冲模式有效
+    uint8_t special_fully_nested : 1;   // 支持特殊全嵌套（1 表示支持）
+    uint8_t reserved : 3;               // 保留位，固定为0
+} PIC_ICW4;
+
+
+// 给PIC的OCW1写的数据，转换成结构体形式
+// 主片OCW1的结构体
 typedef struct {
     uint8_t irq0 : 1 ;          // 是否屏蔽 IRQ 0 中断，为1则屏蔽，为0则不屏蔽
-    uint8_t irq1 : 1 ;          // 是否屏蔽 IRQ 1 中断，为1则屏蔽，为0则不屏蔽（如果屏蔽整个从片，这个也必须屏蔽）
+    uint8_t irq1 : 1 ;          // 是否屏蔽 IRQ 1 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq2 : 1 ;          // 是否屏蔽 IRQ 2 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq3 : 1 ;          // 是否屏蔽 IRQ 3 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq4 : 1 ;          // 是否屏蔽 IRQ 4 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq5 : 1 ;          // 是否屏蔽 IRQ 5 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq6 : 1 ;          // 是否屏蔽 IRQ 6 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq7 : 1 ;          // 是否屏蔽 IRQ 7 中断，为1则屏蔽，为0则不屏蔽
-} PIC_Master_IMR;
+} PIC_Master_OCW1;
 
-// 从片IMR的结构体
+// 从片OCW1的结构体
 typedef struct {
     uint8_t irq8 : 1 ;          // 是否屏蔽 IRQ 8 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq9 : 1 ;          // 是否屏蔽 IRQ 9 中断，为1则屏蔽，为0则不屏蔽
@@ -104,7 +149,7 @@ typedef struct {
     uint8_t irq13 : 1 ;         // 是否屏蔽 IRQ 13 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq14 : 1 ;         // 是否屏蔽 IRQ 14 中断，为1则屏蔽，为0则不屏蔽
     uint8_t irq15 : 1 ;         // 是否屏蔽 IRQ 15 中断，为1则屏蔽，为0则不屏蔽
-} PIC_Slave_IMR;
+} PIC_Slave_OCW1;
 
 // IDT初始化
 void init_idt();
