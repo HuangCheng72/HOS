@@ -10,22 +10,36 @@
 // 中断描述符结构体形式
 typedef struct {
     uint64_t offset_low : 16;   // 位0到位15: 偏移量低16位，中断处理程序的地址（在段中的偏移地址）的低16位。
-    // --------------- 这部分是之前在GDT里面提到的段选择子 ---------------
+
+    // --------------- 这部分是之前在GDT里面提到的段选择子selector ---------------
+
     uint16_t rpl : 2;           // 位16到位17: 段选择子的位0-1: 请求特权级 (Requested Privilege Level, RPL，0最高特权级，3最低特权级)
     uint16_t ti : 1;            // 位18: 段选择子的位2: 表指示符 (Table Indicator, 0=GDT, 1=LDT)
     uint16_t index : 13;        // 位19到位31: 段选择子的位3-15: 段索引 (Segment Index)
-    // --------------- 这部分是之前在GDT里面提到的段选择子 ---------------
+
+    // --------------- 这部分是之前在GDT里面提到的段选择子selector ---------------
+
+    // --------------- 这部分是保留信息dcount，一般用不到设置，全都是0 ---------------
+
     uint64_t ist : 3;           // 位32到位34: 中断堆栈表 (Interrupt Stack Table) 索引，通常为0。
     uint64_t zero : 5;          // 位35到位39: 置零，保留位，设置为0。
-    uint64_t type : 4;          // 位40到位43: 描述符类型（中断门、陷阱门等）。0xE（1110）: 32位中断门（Interrupt Gate），0xF（1111）: 32位陷阱门（Trap Gate）。
 
+    // --------------- 这部分是保留信息dcount，一般用不到设置，全都是0 ---------------
+
+    // --------------- 这部分是access_right，访问权限，《操作系统真象还原》里面叫attribute（属性） ---------------
+
+    uint64_t type : 4;          // 位40到位43: 描述符类型（中断门、陷阱门等）。0xE（1110）: 32位中断门（Interrupt Gate），0xF（1111）: 32位陷阱门（Trap Gate）。
     uint64_t s : 1;             // 位44: 描述符权限，0=系统, 1=代码或数据。对于中断和陷阱门，此位通常为0。
     uint64_t dpl : 2;           // 位45到位46: 描述符特权级 (Descriptor Privilege Level)，0为最高特权级，3为最低特权级。
     uint64_t p : 1;             // 位47: 段存在位 (Present)，1表示描述符有效。
+
+    // --------------- 这部分是access_right，访问权限，《操作系统真象还原》里面叫attribute（属性） ---------------
+
     uint64_t offset_high : 16;  // 位48到位63: 偏移量高16位，中断处理程序的地址（在段中的偏移地址）的高16位。
 } InterruptDescriptor;
 
 // IDT指针结构体，和GDT指针完全一样
+// 如果要使用，必须禁止自动内存对齐该结构体
 typedef struct {
     uint16_t limit;      // IDT界限
     uint32_t base;       // IDT基址
@@ -98,10 +112,9 @@ void init_idt();
 /**
  * 设置中断描述符
  * @param index                 在IDT中的索引
- * @param handler_function      中断处理程序
- * @param selector              段选择子
+ * @param interrupt_handler     指向中断处理程序的函数指针
  */
-void set_interrupt_descriptor(uint32_t index, uint32_t handler_function, uint16_t selector);
+void set_interrupt_descriptor(uint32_t index, void (*interrupt_handler)());
 
 
 #endif //HOS_KERNEL_IDT_H

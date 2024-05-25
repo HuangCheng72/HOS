@@ -68,15 +68,30 @@ void init_idt() {
 
 }
 
-void set_interrupt_descriptor(uint32_t index, uint32_t handler_function, uint16_t selector) {
+
+void set_interrupt_descriptor(uint32_t index, void (*interrupt_handler)()) {
+
     InterruptDescriptor *idt = (InterruptDescriptor *)IDT_BASE_ADDR;
 
-    (idt + index)->offset_low = handler_function & 0xFFFF;
-    (idt + index)->offset_high = (handler_function >> 16) & 0xFFFF;
+    // 一种用结构体和联合体快速分离高位和低位信息的方法（对分离其他位信息同样适用）
+    typedef struct {
+        uint16_t offset_low;
+        uint16_t offset_high;
+    } temp_interrupt_handler_struct;
+    typedef union {
+        void *ptr;              // 32位平台上所有指针本质上都是uin32_t，64位平台上所有指针都是uint64_t
+        temp_interrupt_handler_struct value;
+    } temp_interrupt_handler_union;
 
-    (idt + index)->rpl = selector & 0x3;
-    (idt + index)->ti = (selector >> 2) & 0x1;
-    (idt + index)->index = (selector >> 3) & 0x1FFF;
+    temp_interrupt_handler_union tempUnion;
+    tempUnion.ptr = interrupt_handler;
+
+    (idt + index)->offset_low = tempUnion.value.offset_low;
+    (idt + index)->offset_high = tempUnion.value.offset_high;
+
+    (idt + index)->rpl = 0;     // 内核当然要最高特权
+    (idt + index)->ti = 0;      // 毫无疑问GDT
+    (idt + index)->index = 1;   // 内核代码段在GDT里面的index是1
 
     (idt + index)->ist = 0;     // 通常设置为0
     (idt + index)->zero = 0;    // 保留位，设置为0
