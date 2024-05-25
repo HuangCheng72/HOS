@@ -26,12 +26,12 @@ void put_int(int n);
 // 加载IDT，load_idt.asm
 extern void load_idt(uint16_t limit, uint32_t base);
 // 向端口port写入一个字节的数据。io.asm
-void outb(uint16_t port, uint8_t data);
+extern void outb(uint16_t port, uint8_t data);
 // 将addr处起始的word_cnt个字写入端口port。io.asm
-void outsw(uint16_t port, const void* addr, uint32_t word_cnt);
+extern void outsw(uint16_t port, const void* addr, uint32_t word_cnt);
 // 将从端口port读入的一个字节返回。io.asm
-uint8_t inb(uint16_t port);
+extern uint8_t inb(uint16_t port);
 // 将从端口port读入的word_cnt个字写入addr。io.asm
-void insw(uint16_t port, void* addr, uint32_t word_cnt);
+extern void insw(uint16_t port, void* addr, uint32_t word_cnt);
 
 #endif //HOS_LIB_H
