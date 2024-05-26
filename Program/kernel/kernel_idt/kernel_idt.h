@@ -151,6 +151,28 @@ typedef struct {
     uint8_t irq15 : 1 ;         // 是否屏蔽 IRQ 15 中断，为1则屏蔽，为0则不屏蔽
 } PIC_Slave_OCW1;
 
+// PIC_OCW2 结构体
+typedef struct {
+    uint8_t irq_level : 3;          // 中断请求级别（IR2-IR0），如果要选择中断的级别，sl位必须同时为1
+    uint8_t reserved : 2;           // 保留位，通常为0
+    uint8_t eoi : 1;                // 服务结束中断（EOI），1表示发送EOI
+    uint8_t sl : 1;                 // 选择（Select），1表示选择中断级别
+    uint8_t r : 1;                  // 旋转优先级（Rotate Priority），1表示启用旋转优先级
+} PIC_OCW2;
+
+// PIC_OCW3 结构体
+typedef struct {
+    uint8_t ris  : 1;       // 读哪种中断状态。1: 读中断服务寄存器 (ISR)，0: 读中断请求寄存器 (IRR)
+    uint8_t rr   : 1;       // 是否允许读寄存器。1: 允许读取状态寄存器，0: 不允许读取状态寄存器
+    uint8_t p    : 1;       // 轮询。1: 启用轮询命令，0: 不启用轮询
+    uint8_t reserved1: 1;   // 固定为 1，指示这是一个 OCW3 命令字
+    uint8_t reserved2: 1;   // 固定为 0，指示这是一个 OCW3 命令字
+    uint8_t smm  : 1;       // 特殊屏蔽模式。当 esmm = 1 时有效。0: 禁用特殊屏蔽模式，恢复正常屏蔽模式。1: 启用特殊屏蔽模式，允许特定中断屏蔽。
+    uint8_t esmm : 1;       // 是否启用特殊屏蔽模式。0: 不启用特殊屏蔽模式，1: 启用特殊屏蔽模式，此时 SMM 位起作用。
+    uint8_t reserved3: 1;   // 保留位，通常设置为 0
+} PIC_OCW3;
+
+
 // IDT初始化
 void init_idt();
 
