@@ -16,7 +16,6 @@
 #define ASSERT(CONDITION, ...)                                                          \
         do {                                                                            \
             if (!(CONDITION)) {                                                         \
-                intr_disable();                                                         \
                 put_str("Assertion failed!\n");                                         \
                 put_str("filename:"); put_str(__FILE__); put_str("\n");                 \
                 put_str("line:0x"); put_int(__LINE__); put_str("\n");                   \
