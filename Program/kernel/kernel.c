@@ -2,6 +2,7 @@
 #include "kernel_page/kernel_page.h"
 #include "kernel_gdt/kernel_gdt.h"
 #include "kernel_idt/kernel_idt.h"
+#include "kernel_device/kernel_device.h"
 
 void kernel_main(void) {
 
@@ -18,8 +19,8 @@ void kernel_main(void) {
     switch_esp_virtual_addr() ;
     // 初始化idt
     init_idt();
-
-    put_int(1024);
+    // 初始化内核必需的设备
+    init_device();
 
     // 进入内核主循环或其它初始化代码
     for(;;) {
