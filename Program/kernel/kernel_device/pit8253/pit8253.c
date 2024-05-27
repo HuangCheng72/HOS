@@ -4,25 +4,6 @@
 
 #include "pit8253.h"
 
-/* 把操作的计数器counter_no、读写锁属性rwl、计数器模式counter_mode写入模式控制寄存器并赋予初始值counter_value */
-static void frequency_set(uint8_t counter_port,
-			  uint8_t counter_no,
-			  uint8_t rwl,
-			  uint8_t counter_mode,
-			  uint16_t counter_value) {
-    put_int((uint8_t)counter_value);
-    put_char('\n');
-    put_int((uint8_t)counter_value >> 8);
-    put_char('\n');
-/* 往控制字寄存器端口0x43中写入控制字 */
-    outb(PIT_CONTROL_PORT, (uint8_t)(counter_no << 6 | rwl << 4 | counter_mode << 1));
-/* 先写入counter_value的低8位 */
-    outb(counter_port, (uint8_t)counter_value);
-/* 再写入counter_value的高8位 */
-    outb(counter_port, (uint8_t)counter_value >> 8);
-}
-
-
 void init_pit8253() {
     //frequency_set(CONTRER0_PORT, COUNTER0_NO, READ_WRITE_LATCH, COUNTER_MODE, COUNTER0_VALUE);
     //return;
@@ -34,14 +15,6 @@ void init_pit8253() {
             .counter = COUNTER0_NO      // 选择计数器0
     };
     outb(PIT_CONTROL_PORT, *((uint8_t *)&controlWord));
-
-    CountValue value;
-    value.value = COUNTER0_VALUE;
-    put_int(value.part.offset_low);
-    put_char('\n');
-    put_int(value.part.offset_high);
-    put_char('\n');
-
     // 设置计数初始值（分两次写入）
     outb(CONTRER0_PORT, value.part.offset_low);
     outb(CONTRER0_PORT, value.part.offset_high);
