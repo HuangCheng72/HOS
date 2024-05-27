@@ -1,5 +1,6 @@
 # 目录
-INTERRUPT_HANDLER_DIR = .
+KERNEL_DIR = ..
+KERNEL_INTERRUPT_HANDLER_DIR = .
 
 # 汇编标志
 ASM_FLAGS = -f elf32
@@ -13,8 +14,6 @@ all: $(OBJS)
 
 # 目标文件生成规则
 %.o: %.asm
-	$(NASM) $(ASM_FLAGS) -o $@ $<
+	$(NASM) $(ASM_FLAGS) -o $(KERNEL_DIR)/$@ $<
 
-# 清理目标，删除所有 .o 文件
-clean:
-	@if exist $(INTERRUPT_HANDLER_DIR)\\*.o del $(INTERRUPT_HANDLER_DIR)\\*.o
+# 不生成文件于此，无需清理
