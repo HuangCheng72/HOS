@@ -15,6 +15,9 @@ void init_pit8253() {
             .counter = COUNTER0_NO      // 选择计数器0
     };
     outb(PIT_CONTROL_PORT, *((uint8_t *)&controlWord));
+
+    CountValue value;
+    value.value = COUNTER0_VALUE;
     // 设置计数初始值（分两次写入）
     outb(CONTRER0_PORT, value.part.offset_low);
     outb(CONTRER0_PORT, value.part.offset_high);
