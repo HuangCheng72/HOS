@@ -1,5 +1,5 @@
 # 目录
-KERNEL_DIR = ..
+KERNEL_DIR = ../..
 KERNEL_INTERRUPT_HANDLER_DIR = .
 
 # 汇编标志
