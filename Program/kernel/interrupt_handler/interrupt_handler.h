@@ -7,6 +7,4 @@
 
 // 这个头文件是为了给所有的中断处理函数写声明的地方
 
-extern void interrupt_handler_0x20();
-
 #endif //HOS_INTERRUPT_HANDLER_H
