@@ -5,7 +5,7 @@ KERNEL_INTERRUPT_DIR = .
 #LIB_DIR = ../../lib
 
 # 中断处理函数目录
-KERNEL_INTERRUPT_HANDLER_DIR = kernel_interrupt_handler
+KERNEL_INTERRUPT_HANDLER_DIR = interrupt_handler
 
 # 源文件
 #KERNEL_DEVICE_C_SRC = $(KERNEL_DEVICE_DIR)/kernel_device.c
