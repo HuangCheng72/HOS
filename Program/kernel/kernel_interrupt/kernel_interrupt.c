@@ -4,7 +4,7 @@
 
 #include "kernel_interrupt.h"
 
-#include "../../lib/lib.h"
+#include "../../lib/lib_kernel/lib_kernel.h"
 
 // 这么大费周章的主要原因其实就一个，防止多次开/关中断
 // 如果开了中断就不要开了，如果关了中断就不要关了

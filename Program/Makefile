@@ -32,7 +32,7 @@ all: compile link
 # 编译各组件
 compile:
 	$(MAKE) -C $(BOOT_DIR) NASM=$(NASM)
-	$(MAKE) -C $(LIB_DIR) NASM=$(NASM)
+	$(MAKE) -C $(LIB_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(KERNEL_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 
 # 链接生成 kernel.bin

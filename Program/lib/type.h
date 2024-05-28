@@ -18,6 +18,8 @@ typedef unsigned long long int  uint64_t;
 
 // 常用的一个表示
 typedef uint64_t size_t;
+// 常用的NULL表示
+#define NULL (void *)(0)
 
 #define INT8_MIN  (-128)
 #define INT16_MIN (-32768)

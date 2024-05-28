@@ -5,7 +5,7 @@
 #ifndef HOS_KERNEL_PAGE_H
 #define HOS_KERNEL_PAGE_H
 
-#include "../../lib/lib.h"
+#include "../../lib/lib_kernel/lib_kernel.h"
 
 // 这是一个4位（32字节）的结构体，采用了位域的方式，制定了每一部分占多少位（从低地址到高地址）
 // 页目录项 (Page Directory Entry, PDE)（这也是《操作系统真象还原》说的一级页表）

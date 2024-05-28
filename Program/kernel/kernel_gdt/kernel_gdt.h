@@ -18,7 +18,7 @@
 #define DESC_DB 1                   // 默认操作大小 32位段
 #define DESC_G_4K 1                 // 粒度 4KB
 
-#include "../../lib/lib.h"
+#include "../../lib/lib_kernel/lib_kernel.h"
 
 // 段选择子结构体形式
 typedef struct {

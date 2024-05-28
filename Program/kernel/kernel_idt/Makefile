@@ -2,13 +2,12 @@
 # 目录
 KERNEL_DIR = ..
 KERNEL_IDT_DIR = .
-LIB_DIR = ../../lib
 
 # 源文件
 KERNEL_IDT_C_SRC = $(KERNEL_IDT_DIR)/kernel_idt.c
 
 # C 编译标志
-CFLAGS = -ffreestanding -nostdlib -Wall -Wextra -I$(LIB_DIR)
+CFLAGS = -ffreestanding -nostdlib -Wall -Wextra
 
 # 标签标记所有的任务（输出什么文件），方便修改
 KERNEL_OBJS = $(KERNEL_DIR)/kernel_idt.o

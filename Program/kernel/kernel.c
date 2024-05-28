@@ -1,16 +1,10 @@
-#include "../lib/lib.h"
+#include "../lib/lib_kernel/lib_kernel.h"
 #include "kernel_page/kernel_page.h"
 #include "kernel_gdt/kernel_gdt.h"
 #include "kernel_idt/kernel_idt.h"
 #include "kernel_device/kernel_device.h"
-#include "kernel_interrupt/kernel_interrupt.h"
 
 void kernel_main(void) {
-
-    //put_str("This is a kernel.\n");
-    //put_str("After the kernel initialization completes.\n");
-    //put_str("The kernel will print integer '1024' on screen.\n");
-    //put_str("'1024' in hexadecimal format is '0x400'.\n");
 
     // 内存分页初始化
     init_paging();
@@ -23,9 +17,6 @@ void kernel_main(void) {
     // 初始化内核必需的设备
     init_device();
 
-    if(intr_get_status() == INTR_OFF) {
-        put_char('C');
-    }
 
     // 进入内核主循环或其它初始化代码
     for(;;) {

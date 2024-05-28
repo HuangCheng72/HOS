@@ -3,13 +3,12 @@
 KERNEL_DIR = ..
 KERNEL_INTERRUPT_DIR = .
 
-LIB_DIR = ../../lib
 
 # 源文件
 KERNEL_INTERRUPT_C_SRC = $(KERNEL_INTERRUPT_DIR)/kernel_interrupt.c
 
 # C 编译标志
-CFLAGS = -ffreestanding -nostdlib -Wall -Wextra -I$(LIB_DIR)
+CFLAGS = -ffreestanding -nostdlib -Wall -Wextra
 
 # 标签标记所有的任务（输出什么文件），方便修改
 KERNEL_OBJS = $(KERNEL_DIR)/kernel_interrupt.o

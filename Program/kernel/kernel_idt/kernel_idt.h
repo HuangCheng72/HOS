@@ -5,7 +5,7 @@
 #ifndef HOS_KERNEL_IDT_H
 #define HOS_KERNEL_IDT_H
 
-#include "../../lib/lib.h"
+#include "../../lib/lib_kernel/lib_kernel.h"
 
 // 中断描述符结构体形式
 typedef struct {

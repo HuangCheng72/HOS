@@ -5,7 +5,7 @@
 #ifndef HOS_PIT8253_H
 #define HOS_PIT8253_H
 
-#include "../../../lib/lib.h"
+#include "../../../lib/lib_kernel/lib_kernel.h"
 
 #define IRQ0_FREQUENCY	   100
 #define INPUT_FREQUENCY	   1193180

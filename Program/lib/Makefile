@@ -1,19 +1,15 @@
 # 目录
 LIB_DIR = .
+LIB_KERNEL = lib_kernel
 
-# 汇编标志
-ASM_FLAGS = -f elf32
+OBJS = $(LIB_DIR)/kernel.o
 
-# 定义源文件和目标文件
-SRCS = $(wildcard *.asm)
-OBJS = $(SRCS:.asm=.o)
-
-# 默认目标，编译所有的 .asm 文件
+# 默认目标
 all: $(OBJS)
 
 # 目标文件生成规则
-%.o: %.asm
-	$(NASM) $(ASM_FLAGS) -o $@ $<
+$(LIB_DIR)/kernel.o:
+	$(MAKE) -C $(LIB_KERNEL) GCC=$(GCC) AS=$(AS) NASM=$(NASM) MAKE=$(MAKE)
 
 # 清理目标，删除所有 .o 文件
 clean:
