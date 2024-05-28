@@ -3,6 +3,7 @@
 #include "kernel_gdt/kernel_gdt.h"
 #include "kernel_idt/kernel_idt.h"
 #include "kernel_device/kernel_device.h"
+#include "kernel_memory/kernel_memory.h"
 
 void kernel_main(void) {
 
@@ -16,6 +17,9 @@ void kernel_main(void) {
     init_idt();
     // 初始化内核必需的设备
     init_device();
+    // 初始化内存管理
+    init_memory();
+
 
 
     // 进入内核主循环或其它初始化代码

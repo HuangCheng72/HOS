@@ -7,6 +7,7 @@
 
 #include "../type.h"
 #include "string/string.h"
+#include "bitmap/bitmap.h"
 
 // 这个文件存在的意义主要就是为了声明汇编暴露的函数，加上type.h可以为系统各组件提供统一的支持
 

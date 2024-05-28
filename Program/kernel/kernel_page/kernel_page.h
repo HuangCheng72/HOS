@@ -42,9 +42,6 @@ typedef struct {
 #define PAGE_DIR_TABLE_POS 0x100000  // 页目录表的起始物理地址
 #define PAGE_TABLE_ENTRIES 1024      // 每个页表中的页表项数量
 #define PAGE_DIR_ENTRIES 1024        // 页目录中的页目录项数量
-#define PG_PRESENT 1                 // 页表项/页目录项的存在标志位
-#define PG_RW 2                      // 页表项/页目录项的读/写标志位
-#define PG_USER 4                    // 页表项/页目录项的用户/超级用户标志位
 
 // 内存分页功能初始化
 void init_paging();
