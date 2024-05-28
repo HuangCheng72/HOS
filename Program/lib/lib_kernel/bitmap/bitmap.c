@@ -21,12 +21,21 @@ int32_t bitmap_is_bit_set(BitMap* btmp, uint32_t bit_idx) {
     int32_t result = (btmp->bits[byte_idx] & (1 << bit_odd));
     */
 
+    if (bit_idx >= btmp->btmp_bytes_len * 8) {
+        // 越界了，无论如何都是1
+        return 1;  // 越界处理
+    }
+
     return (btmp->bits[bit_idx / 8] & (1 << (bit_idx % 8)));
 }
 
 // 将位图btmp的bit_idx位设置为value
 void bitmap_set(BitMap* btmp, uint32_t bit_idx, int8_t value) {
     ASSERT((value == 0) || (value == 1));
+
+    if (bit_idx >= btmp->btmp_bytes_len * 8) {
+        return;  // 越界处理
+    }
 
     // 核心逻辑，如果设置数是0，那么直接对那一位位与就行了
     // 但是怕误伤其他位，所以参与位于的数据，其他位的位于必须是1，只能有该位是0
