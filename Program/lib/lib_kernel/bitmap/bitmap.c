@@ -59,8 +59,7 @@ int32_t bitmap_scan(BitMap* btmp, uint32_t cnt) {
         idx_byte++;
     }
 
-    ASSERT(idx_byte < btmp->btmp_bytes_len);
-    if (idx_byte == btmp->btmp_bytes_len) {
+    if (idx_byte >= btmp->btmp_bytes_len) {
         // 若找不到可用空间，那就真没办法了
         return -1;
     }
@@ -89,4 +88,45 @@ int32_t bitmap_scan(BitMap* btmp, uint32_t cnt) {
         }
     }
     return -1;  // 找不到连续的cnt个空闲位
+}
+
+void bitmap_set_range(BitMap* btmp, uint32_t start_idx, uint32_t cnt, int8_t value) {
+    if (start_idx + cnt > btmp->btmp_bytes_len * 8) {
+        return;  // 越界处理
+    }
+    if (cnt == 0) {
+        return;
+    }
+
+    ASSERT((value == 0) || (value == 1));
+
+    uint32_t byte_idx = start_idx / 8;
+    uint32_t bit_idx = start_idx % 8;
+    uint32_t bits_left = cnt;
+
+    // 处理第一个字节中的剩余位
+    for(;bits_left > 0 && bit_idx < 8; bit_idx++){
+        bitmap_set(btmp, byte_idx * 8 + bit_idx, value);
+        bits_left--;
+    }
+
+    // 如果第一个字节处理完毕，更新 byte_idx
+    if (bit_idx == 8) {
+        byte_idx++;
+        bit_idx = 0;
+    }
+
+    // 处理完整的字节
+    while (bits_left >= 8) {
+        btmp->bits[byte_idx] = value ? 0xff : 0x00;
+        bits_left -= 8;
+        byte_idx++;
+    }
+
+    // 处理最后一个字节中的剩余位
+    while (bits_left > 0) {
+        bitmap_set(btmp, byte_idx * 8 + bit_idx, value);
+        bits_left--;
+        bit_idx++;
+    }
 }
