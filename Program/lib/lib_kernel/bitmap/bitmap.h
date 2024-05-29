@@ -22,8 +22,8 @@ int32_t bitmap_is_bit_set(BitMap* btmp, uint32_t bit_idx);
 void bitmap_set(BitMap* btmp, uint32_t bit_idx, int8_t value);
 // 在位图中申请连续cnt个位,成功则返回其起始位下标，失败返回-1
 int32_t bitmap_scan(BitMap* btmp, uint32_t cnt);
-// 在位图中从指定起始位开始申请连续cnt个位, 成功则返回其起始位下标，失败返回-1
-int32_t bitmap_scan_from_start(BitMap* btmp, uint32_t start_bit_idx, uint32_t cnt);
+// 从指定起始位开始，在位图中申请连续cnt个位, 成功则返回其起始位下标，失败返回-1
+int32_t bitmap_scan_in_range(BitMap* btmp, uint32_t start_bit_idx, uint32_t end_bit_idx, uint32_t cnt);
 // 连续设置位图
 void bitmap_set_range(BitMap* btmp, uint32_t start_idx, uint32_t cnt, int8_t value);
 
