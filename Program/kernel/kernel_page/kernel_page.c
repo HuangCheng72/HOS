@@ -28,8 +28,8 @@ void setup_page_directory(page_directory_entry_t* page_directory) {
     // 页表也是一样的，4096字节，4KB大小，也就是说从1MB开始的两个内存页，就是我们存放分页文件的地方
     page_table_entry_t* first_page_table = (page_table_entry_t*) (PAGE_DIR_TABLE_POS + 0x1000);
 
-    // 初始化第一个第二个页目录表的所有页表条目（两个页目录表对应8MB内存，无论如何都预留给内核）
-    for (int i = 0; i < PAGE_TABLE_ENTRIES + PAGE_TABLE_ENTRIES; ++i) {
+    // 初始化第一个256个页表条目（对应低端1MB，内核已使用）
+    for (int i = 0; i < 256; ++i) {
         // 设置页表项 (PTE)
         first_page_table[i].present = 1;     // 页表项存在
         first_page_table[i].rw = 1;          // 页表项可读写
@@ -39,30 +39,20 @@ void setup_page_directory(page_directory_entry_t* page_directory) {
         // 等效于 first_page_table[i].frame = i，但这才是完整的计算逻辑
     }
 
-    // 设置页目录表的第一个条目，映射低端内存 (第一个4MB)
+    // 设置页目录表的第一个条目，映射低端内存 (第一个1MB)
     page_directory[0].present = 1;           // 页目录项存在
     page_directory[0].rw = 1;                // 页目录项可读写
     page_directory[0].us = 0;                // 页目录项为超级用户权限
     page_directory[0].table = ((uint32_t) first_page_table) >> 12;  // 页表地址
-    // 设置页目录表的第一个条目，映射低端内存 (第二个4MB)
-    page_directory[1].present = 1;           // 页目录项存在
-    page_directory[1].rw = 1;                // 页目录项可读写
-    page_directory[1].us = 0;                // 页目录项为超级用户权限
-    page_directory[1].table = ((uint32_t)first_page_table + 0x1000) >> 12;  // 页表地址
 
     // 设置页目录表的第768个条目，映射高地址内存 (从3GB开始)
     // 说清楚就是，768 * 1024 = 3GB = 0xc0000000，从这里开始，低地址和高地址可以很轻易计算了
 
-    // 第一个4MB
+    // 第一个1MB
     page_directory[768].present = 1;         // 页目录项存在
     page_directory[768].rw = 1;              // 页目录项可读写
     page_directory[768].us = 0;              // 页目录项为超级用户权限
     page_directory[768].table = ((uint32_t) first_page_table) >> 12;  // 页表地址
-    // 第二个4MB
-    page_directory[769].present = 1;         // 页目录项存在
-    page_directory[769].rw = 1;              // 页目录项可读写
-    page_directory[769].us = 0;              // 页目录项为超级用户权限
-    page_directory[769].table = ((uint32_t)first_page_table + 0x1000) >> 12;  // 页表地址
 
 
     // 设置页目录表的最后一个条目，指向页目录表自身，实现自引用
@@ -73,7 +63,7 @@ void setup_page_directory(page_directory_entry_t* page_directory) {
 
 
     // 设置页目录表第770到1023个条目，映射高地址内存 (从3GB开始)
-    for (int i = 2; i < 256; ++i) {
+    for (int i = 1; i < 256; ++i) {
         page_directory[768 + i].present = 1;     // 页目录项存在
         page_directory[768 + i].rw = 1;          // 页目录项可读写
         page_directory[768 + i].us = 0;          // 页目录项为用户权限
