@@ -3,6 +3,7 @@ LIB_DIR = ..
 LIB_KERNEL = .
 STRING_DIR = string
 BITMAP_DIR = bitmap
+LIST_DIR = list
 
 # 汇编标志
 ASM_FLAGS = -f elf32
@@ -12,7 +13,7 @@ SRCS = $(wildcard *.asm)
 OBJS = $(SRCS:.asm=.o)
 
 # 默认目标，编译所有的 .asm 文件
-all: $(OBJS) $(LIB_DIR)/string.o $(LIB_DIR)/bitmap.o
+all: $(OBJS) $(LIB_DIR)/string.o $(LIB_DIR)/bitmap.o $(LIB_DIR)/list.o
 
 # 目标文件生成规则
 %.o: %.asm
@@ -23,5 +24,8 @@ $(LIB_DIR)/string.o:
 
 $(LIB_DIR)/bitmap.o:
 	$(MAKE) -C $(BITMAP_DIR) GCC=$(GCC) AS=$(AS)
+
+$(LIB_DIR)/list.o:
+	$(MAKE) -C $(LIST_DIR) GCC=$(GCC) AS=$(AS)
 
 # 文件不在这里生成，无需清理
