@@ -134,6 +134,57 @@ void free_physical_pages(void *page_phyaddr) {
 
 }
 
+// 添加映射
+int8_t add_page_mapping(uint32_t virtual_address, uint32_t physical_address) {
+
+    VaddrPart info = {.addr_value = virtual_address};
+    // 所有目录项在初始化的时候都已经存在了，不用管了
+    // 只是页表项地址还没有解决而已
+    uint32_t *page_table = (uint32_t *)(PAGE_DIR_TABLE_POS + 0x1000 + info.part.pde_index * 0x1000 + sizeof(uint32_t) * info.part.pte_index);
+
+    typedef union {
+        uint32_t value;
+        page_table_entry_t page_table_entry;
+    } TableTransfer;
+
+    TableTransfer tableTransfer = {.value = *page_table};
+
+    if (tableTransfer.page_table_entry.present) {
+        // 如果已经存在映射，可以选择返回错误或覆盖旧映射
+        // 这里选择直接失败返回
+        return 0;
+    }
+
+    // 设置页表项
+    tableTransfer.page_table_entry.present = 1;
+    tableTransfer.page_table_entry.rw = 1;
+    tableTransfer.page_table_entry.us = 0;
+    tableTransfer.page_table_entry.frame = physical_address >> 12;
+
+    // 写入，建立映射
+    *(page_table) = tableTransfer.value;
+
+    return 1;
+}
+// 移除映射，返回对应的物理页表地址
+void *remove_page_mapping(uint32_t virtual_address) {
+
+    VaddrPart info = {.addr_value = virtual_address};
+    // 所有目录项在初始化的时候都已经存在了，不用管了
+    // 只是页表项地址还没有解决而已
+    uint32_t *page_table = (uint32_t *)(PAGE_DIR_TABLE_POS + 0x1000 + info.part.pde_index * 0x1000 + sizeof(uint32_t) * info.part.pte_index);
+    typedef union {
+        uint32_t value;
+        page_table_entry_t page_table_entry;
+    } TableTransfer;
+    TableTransfer tableTransfer = {.value = *page_table};
+    uint32_t physical_address = tableTransfer.page_table_entry.frame >> 12;
+    // 直接移除全部数据
+    *(page_table) = 0;
+
+    return (void *)physical_address;
+}
+
 // 申请以页为单位的内存
 void* malloc_page(MemoryRequesterType type, uint32_t pg_cnt){
 
@@ -146,7 +197,7 @@ void* malloc_page(MemoryRequesterType type, uint32_t pg_cnt){
         // 然后再一个个申请做映射
         // 因为要做到原子操作，所以申请失败必须全部回滚
         // 我这里用时间换空间，直接用数组把页数据存起来，如果执行不了就全部回滚
-        uint8_t fail = 0;
+        uint8_t success = 1;
         void *pages[pg_cnt];
         for(uint32_t i = 0; i < pg_cnt; i++) {
             pages[i] = NULL;
@@ -154,43 +205,36 @@ void* malloc_page(MemoryRequesterType type, uint32_t pg_cnt){
         for(uint32_t i = 0; i < pg_cnt; i++) {
             pages[i] = alloc_physical_pages(KERNEL_FLAG);
             if(pages[i] == NULL) {
-                fail = 1;
+                success = 0;
                 break;
             }
         }
-        for (uint32_t i = 0; (i < pg_cnt) && fail; ++i) {
-            // 失败回滚
-            free_physical_pages(pages[i]);
-        }
-        if(fail){
+        if (!success) {
+            // 失败回滚，删除虚拟页，释放物理页
+            free_virtual_pages(kernel_virtual_addr, vaddr, pg_cnt);
+            for (uint32_t i = 0; i < pg_cnt; i++) {
+                if (pages[i] != NULL) {
+                    free_physical_pages(pages[i]);
+                }
+            }
             return NULL;
         }
-
-        typedef union {
-            uint32_t value;
-            page_table_entry_t page_table_entry;
-        } TableTransfer;
-
-        TableTransfer tableTransfer;
-
         // 到这里还没失败说明都成功了，逐个建立映射
         for (uint32_t i = 0; i < pg_cnt; i++) {
-            uint32_t virtual_address = (uint32_t)vaddr + i * PG_SIZE;
-            VaddrPart info = {.addr_value = virtual_address};
-            // 所有目录项在初始化的时候都已经存在了，不用管了
-            // 只是页表项地址还没有解决而已
-            uint32_t *page_table = (uint32_t *)(PAGE_DIR_TABLE_POS + 0x1000 + info.part.pde_index * 0x1000 + sizeof(uint32_t) * info.part.pte_index);
 
-            // 设置页表项
-            tableTransfer.page_table_entry.present = 1;
-            tableTransfer.page_table_entry.rw = 1;
-            tableTransfer.page_table_entry.us = 0;
-            tableTransfer.page_table_entry.frame = ((uint32_t)pages[i]) >> 12;
+            success = add_page_mapping((uint32_t)vaddr + i * PG_SIZE, (uint32_t)pages[i]);
 
-            // 写入，建立映射
-            *(page_table) = tableTransfer.value;
-
+            if (!success) {
+                // 失败回滚，删除已建立的映射，释放物理页
+                for (uint32_t j = 0; j < i; j++) {
+                    remove_page_mapping((uint32_t)vaddr + j * PG_SIZE);
+                    free_physical_pages(pages[j]);
+                }
+                free_virtual_pages(kernel_virtual_addr, vaddr, pg_cnt);
+                return NULL;
+            }
         }
+
         return vaddr;
 
     } else {
@@ -204,33 +248,17 @@ void free_page(MemoryRequesterType type, void* vaddr, uint32_t pg_cnt) {
     if (vaddr == NULL || pg_cnt == 0) {
         return;
     }
-    typedef union {
-        uint32_t value;
-        page_table_entry_t page_table_entry;
-    } TableTransfer;
-
-    TableTransfer tableTransfer;
 
     if(type == KERNEL_FLAG) {
         // 逐个释放页表中的物理页
         for (uint32_t i = 0; i < pg_cnt; i++) {
+            // 计算虚拟地址
             uint32_t virtual_address = (uint32_t)vaddr + i * PG_SIZE;
-            VaddrPart info = {.addr_value = virtual_address};
-
-            // 获取页表项地址
-            uint32_t *page_table = (uint32_t *)(PAGE_DIR_TABLE_POS + 0x1000 + info.part.pde_index * 0x1000 + sizeof(uint32_t) * info.part.pte_index);
-
-            // 获取页表项的物理地址
-            tableTransfer.value = *page_table;
-            if (tableTransfer.page_table_entry.present) {
-                void* page_phyaddr = (void*)(tableTransfer.page_table_entry.frame << 12);
+            // 移除映射关系
+            void* page_phyaddr = remove_page_mapping(virtual_address);
+            // 释放物理页
+            if (page_phyaddr != NULL) {
                 free_physical_pages(page_phyaddr);
-                // 清空页表项
-                tableTransfer.page_table_entry.present = 0;
-                tableTransfer.page_table_entry.rw = 0;
-                tableTransfer.page_table_entry.us = 0;
-                tableTransfer.page_table_entry.frame = 0;
-                *page_table = tableTransfer.value;
             }
         }
 
