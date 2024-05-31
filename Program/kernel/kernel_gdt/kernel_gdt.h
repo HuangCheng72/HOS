@@ -58,6 +58,10 @@ typedef struct {
 #define GDT_PTR_ADDR 0xa03              // gdt_ptr在内存中的地址
 #define HIGH_ADDR_OFFSET 0xc0000000     // 往高地址的偏移量
 
+// GDT修改，挪到0x1500之后，和IDT放在一块吧（0x1500之前全部留给栈使用）
+// IDT结束位置是0x10800
+#define NEW_GDT_BASE_ADDR 0x10800
+
 // 调整GDT到高地址处（内核所在的虚拟地址上）
 void setup_gdt();
 

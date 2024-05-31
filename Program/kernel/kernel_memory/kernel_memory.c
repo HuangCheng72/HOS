@@ -57,9 +57,8 @@ typedef union {
 }VaddrPart;
 
 // 内存管理初始化
-void init_memory() {
+void init_memory(uint32_t total_physical_memory) {
 
-    uint32_t total_physical_memory = *((uint32_t *)(0xa09));
     // 已经被占用的就不用管理了，比如页表、比如位图，这两个动不得
     // 物理地址位图，一页是一位，一字节8位
     global_bitmap_physical_memory.bits = (uint8_t *)GLOBAL_BITMAP_PHYSICAL_BASE;

@@ -7,16 +7,19 @@
 
 void kernel_main(void) {
 
+    uint32_t total_physical_memory = *((uint32_t *)(0xa09));
     // 内存分页初始化
     init_paging();
     // 重新加载gdt
     setup_gdt();
-    // 调整ESP，将栈指针切换到高地址
-    switch_esp_virtual_addr() ;
+    // 调整ESP，将栈指针切换到高地址（栈大小增加到0x1500）
+//    put_str("gdt\n");
+//    for(;;);
+    switch_esp_virtual_addr();
     // 初始化idt
     init_idt();
     // 初始化内存管理
-    init_memory();
+    init_memory(total_physical_memory);
     // 初始化所有设备
     init_all_devices();
 

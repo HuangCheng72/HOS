@@ -25,7 +25,14 @@ void setup_gdt() {
     (gdt + 3)->g = DESC_G_4K;
     (gdt + 3)->base_high = 0xc0;    // 加上偏移量0xc0000000，从虚拟内存可以映射到物理内存，这也是调整视频段的基址
 
+    // GDT搬家
+    SegmentDescriptor *new_gdt = (SegmentDescriptor *)NEW_GDT_BASE_ADDR;
+    *(uint64_t *)(new_gdt + 0) = *(uint64_t *)(gdt + 0);
+    *(uint64_t *)(new_gdt + 1) = *(uint64_t *)(gdt + 1);
+    *(uint64_t *)(new_gdt + 2) = *(uint64_t *)(gdt + 2);
+    *(uint64_t *)(new_gdt + 3) = *(uint64_t *)(gdt + 3);
+
     // 用虚拟地址重新加载GDT
-    load_gdt(32 * 8 - 1, GDT_BASE_ADDR + HIGH_ADDR_OFFSET);
+    load_gdt(32 * 8 - 1, NEW_GDT_BASE_ADDR + HIGH_ADDR_OFFSET);
 
 }

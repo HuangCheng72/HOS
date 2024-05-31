@@ -21,7 +21,7 @@ typedef struct {
 } Virtual_Addr;
 
 // 内存管理初始化
-void init_memory();
+void init_memory(uint32_t total_physical_memory);
 // 申请以页为单位的内存
 void* malloc_page(MemoryRequesterType type, uint32_t pg_cnt);
 // 以页为单位归还内存
