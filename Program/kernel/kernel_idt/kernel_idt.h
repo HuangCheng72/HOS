@@ -172,6 +172,27 @@ typedef struct {
     uint8_t reserved3: 1;   // 保留位，通常设置为 0
 } PIC_OCW3;
 
+// ISR 结构体
+typedef struct {
+    uint8_t irq0 : 1;    // IRQ 0
+    uint8_t irq1 : 1;    // IRQ 1
+    uint8_t irq2 : 1;    // IRQ 2
+    uint8_t irq3 : 1;    // IRQ 3
+    uint8_t irq4 : 1;    // IRQ 4
+    uint8_t irq5 : 1;    // IRQ 5
+    uint8_t irq6 : 1;    // IRQ 6
+    uint8_t irq7 : 1;    // IRQ 7
+} MASTER_ISR;
+typedef struct {
+    uint8_t irq8 : 1 ;          // IRQ 8
+    uint8_t irq9 : 1 ;          // IRQ 9
+    uint8_t irq10 : 1 ;         // IRQ 10
+    uint8_t irq11 : 1 ;         // IRQ 11
+    uint8_t irq12 : 1 ;         // IRQ 12
+    uint8_t irq13 : 1 ;         // IRQ 13
+    uint8_t irq14 : 1 ;         // IRQ 14
+    uint8_t irq15 : 1 ;         // IRQ 15
+} SLAVE_ISR;
 
 // IDT初始化
 void init_idt();
