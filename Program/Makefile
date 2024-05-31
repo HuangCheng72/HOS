@@ -2,6 +2,7 @@
 
 # 汇编器和编译器、链接器等各种工具
 NASM = nasm
+# 编译工具链更换
 GCC = i686-elf-gcc
 AS = i686-elf-as
 LD = i686-elf-ld
