@@ -6,4 +6,9 @@ SECTIONS
     .text : { *(.text) }
     .data : { *(.data) }
     .bss : { *(.bss) }
+    .drivers : {    /* 这个段用于加载驱动 */
+        __drivers_start = .;
+        KEEP(*(.drivers))
+        __drivers_end = .;
+    }
 }
