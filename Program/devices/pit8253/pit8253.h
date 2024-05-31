@@ -5,7 +5,7 @@
 #ifndef HOS_PIT8253_H
 #define HOS_PIT8253_H
 
-#include "../../../lib/lib_kernel/lib_kernel.h"
+#include "../../kernel/kernel_device/kernel_device.h"
 
 #define IRQ0_FREQUENCY	   100
 #define INPUT_FREQUENCY	   1193180
@@ -57,5 +57,7 @@ typedef union {
 
 // pit8253初始化函数
 void init_pit8253();
+// pit8253退出函数
+void exit_pit8253();
 
 #endif //HOS_PIT8253_H

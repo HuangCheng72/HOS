@@ -2,9 +2,9 @@
 
 # 汇编器和编译器、链接器等各种工具
 NASM = nasm
-GCC = i386-elf-gcc
-AS = i386-elf-as
-LD = i386-elf-ld
+GCC = i686-elf-gcc
+AS = i686-elf-as
+LD = i686-elf-ld
 MAKE = make
 
 # 因为这个操作系统本质上是个宏内核，所有的组件都要打包在一个kernel.bin里面
@@ -14,6 +14,7 @@ MAKE = make
 BOOT_DIR = boot
 KERNEL_DIR = kernel
 LIB_DIR = lib
+DEVICE_DIR = devices
 
 # 输出文件
 KERNEL_BIN = $(KERNEL_DIR)/kernel.bin
@@ -34,13 +35,15 @@ compile:
 	$(MAKE) -C $(BOOT_DIR) NASM=$(NASM)
 	$(MAKE) -C $(LIB_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(KERNEL_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+	$(MAKE) -C $(DEVICE_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 
 # 链接生成 kernel.bin
 link:
-	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(wildcard $(KERNEL_DIR)/*.o) $(wildcard $(LIB_DIR)/*.o)
+	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(wildcard $(KERNEL_DIR)/*.o) $(wildcard $(LIB_DIR)/*.o) $(wildcard $(DEVICE_DIR)/*.o)
 
 
 clean:
 	$(MAKE) -C $(BOOT_DIR) clean
 	$(MAKE) -C $(KERNEL_DIR) clean
 	$(MAKE) -C $(LIB_DIR) clean
+	$(MAKE) -C $(DEVICE_DIR) clean
