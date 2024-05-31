@@ -12,8 +12,8 @@ struct list_node driver_list_head;
 extern struct driver __drivers_start[];
 extern struct driver __drivers_end[];
 
-// 仅用于PIC的中断处理逻辑数组
-extern void (*pic_irq_interrupt_handlers[16])(void);
+// 中断处理逻辑数组
+extern void (*interrupt_handler_functions[256])(void);
 
 void init_all_devices() {
     // 初始化驱动链表头结点
@@ -36,8 +36,8 @@ void exit_all_devices() {
             drv->exit();
         }
         // 如果中断号在有效范围内且匹配当前驱动的中断处理程序
-        if (drv->irq >= 0 && drv->irq < 16 && pic_irq_interrupt_handlers[drv->irq] == drv->irq_interrupt_handler) {
-            pic_irq_interrupt_handlers[drv->irq] = NULL;
+        if (drv->irq >= 0 && drv->irq < 16 && interrupt_handler_functions[drv->irq + 0x20] == drv->irq_interrupt_handler) {
+            interrupt_handler_functions[drv->irq + 0x20] = NULL;
         }
         // 从链表中移除该驱动
         list_del(pos);
@@ -66,10 +66,10 @@ void driver_add(struct driver* drv) {
     // 如果要求注册中断处理函数，必须检查中断号范围
     if (drv->irq >= 0 && drv->irq < 16) {
         // 检查对应位置是否已被占用
-        if (pic_irq_interrupt_handlers[drv->irq] != NULL) {
+        if (interrupt_handler_functions[drv->irq + 0x20] != NULL) {
             return; // 中断处理程序冲突，不得挂载驱动
         } else {
-            pic_irq_interrupt_handlers[drv->irq] = drv->irq_interrupt_handler;
+            interrupt_handler_functions[drv->irq + 0x20] = drv->irq_interrupt_handler;
         }
     } else if (drv->irq_interrupt_handler != NULL) {
         // IRQ 不在范围内但要求注册中断处理函数，不得挂载驱动
@@ -102,8 +102,8 @@ void driver_remove(const char *driver_name) {
             }
 
             // 检查是否需要清除中断处理逻辑
-            if (drv->irq >= 0 && drv->irq < 16 && pic_irq_interrupt_handlers[drv->irq] == drv->irq_interrupt_handler) {
-                pic_irq_interrupt_handlers[drv->irq] = NULL;
+            if (drv->irq >= 0 && drv->irq < 16 && interrupt_handler_functions[drv->irq + 0x20] == drv->irq_interrupt_handler) {
+                interrupt_handler_functions[drv->irq + 0x20] = NULL;
             }
 
             // 清除干净，允许中断

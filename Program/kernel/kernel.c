@@ -13,8 +13,6 @@ void kernel_main(void) {
     // 重新加载gdt
     setup_gdt();
     // 调整ESP，将栈指针切换到高地址（栈大小增加到0x1500）
-//    put_str("gdt\n");
-//    for(;;);
     switch_esp_virtual_addr();
     // 初始化idt
     init_idt();

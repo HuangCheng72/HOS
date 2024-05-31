@@ -4,73 +4,40 @@
 
 #include "kernel_idt.h"
 
-#include "../kernel_interrupt/kernel_interrupt.h"
+#include "../interrupt_handler/interrupt_handler.h"
+
 
 // 仅用于PIC的中断处理逻辑数组
-void (*pic_irq_interrupt_handlers[16])(void) = { NULL };
+void (*interrupt_handler_functions[256])(void) = { NULL };
 
-// 仅用于PIC的中断分发器
-void pic_irq_interrupt_dispatcher() {
-    // 禁用中断
-    intr_disable();
-    // 设置OCW3结构体读取主PIC的ISR
-    PIC_OCW3 ocw3 = {
-        .ris = 1,
-        .rr = 1,
-        .p = 0,
-        .reserved1 = 1,
-        .reserved2 = 0,
-        .smm = 0,
-        .esmm = 0,
-        .reserved3 = 0,
-    };
-    // 读取主PIC的ISR
-    outb(PIC_M_CTRL, *(uint8_t*)&ocw3); // 写入命令
-    uint8_t master_isr = inb(PIC_M_CTRL); // 读取ISR
-    // 读取从PIC的ISR
-    outb(PIC_S_CTRL, *(uint8_t*)&ocw3); // 写入命令
-    uint8_t slave_isr = inb(PIC_S_CTRL); // 读取ISR
+// 统一中断分发器
+void interrupt_dispatcher(uint32_t interrupt_number, uint32_t error_code){
 
-    // 遍历检查哪一个IRQ触发了中断
-    uint32_t interrupt_number = 0;
-    for (uint8_t i = 0; i < 8; i++) {
-        //用位运算的原因是因为用结构体判断代码太长了
-        if (master_isr & (1 << i)) {
-            interrupt_number =  i; // 主 PIC 中断号从 0x20 开始
-            break;
-        } else if (slave_isr & (1 << i)) {
-            interrupt_number = 8 + i; // 从 PIC 中断号从 0x28 开始
-            break;
+    if(interrupt_number > 0x1f && interrupt_number < 0x30) {
+
+        if (interrupt_handler_functions[interrupt_number]) {
+            interrupt_handler_functions[interrupt_number]();
         }
+
+        // 发送 EOI 信号
+        PIC_OCW2 ocw2 = {
+                .irq_level = 0,
+                .reserved = 0,
+                .eoi = 1,
+                .sl = 0,
+                .r = 0,
+        };
+        // 发送EOI信号
+        if (interrupt_number >= 0x28) {
+            // 如果是从PIC引起的，不仅要给主PIC，还要发送给从PIC，
+            // 发送 EOI 信号给从 PIC
+            outb(PIC_S_CTRL, *(uint8_t*)&ocw2);
+        }
+        // 发送 EOI 信号给主 PIC
+        outb(PIC_M_CTRL, *(uint8_t*)&ocw2);
     }
 
-    if (pic_irq_interrupt_handlers[interrupt_number]) {
-        pic_irq_interrupt_handlers[interrupt_number]();
-    }
-
-    // 发送 EOI 信号
-    PIC_OCW2 ocw2 = {
-        .irq_level = 0,
-        .reserved = 0,
-        .eoi = 1,
-        .sl = 0,
-        .r = 0,
-    };
-    // 发送EOI信号
-    if (interrupt_number >= 0x28) {
-        // 如果是从PIC引起的，不仅要给主PIC，还要发送给从PIC，
-        // 发送 EOI 信号给从 PIC
-        outb(PIC_S_CTRL, *(uint8_t*)&ocw2);
-    }
-    // 发送 EOI 信号给主 PIC
-    outb(PIC_M_CTRL, *(uint8_t*)&ocw2);
-    // 启用中断
-    intr_enable();
 }
-
-
-// 包装PIC中断分发器的中断处理函数
-extern void pic_irq_interrupt_handler();
 
 void init_idt() {
 
@@ -192,10 +159,55 @@ void init_idt() {
     outb (PIC_M_DATA, *((uint8_t*)(&ocw1_m)));   // 屏蔽主PIC所有中断
     outb (PIC_S_DATA, *((uint8_t*)(&ocw1_s)));   // 屏蔽从PIC所有中断
 
-    // 注册PIC的这些中断处理函数为统一包装函数
-    for(int i = 0x20; i < 0x30; i++) {
-        set_interrupt_descriptor(i, pic_irq_interrupt_handler);
-    }
+    set_interrupt_descriptor(0, interrupt_handler_0);
+    set_interrupt_descriptor(1, interrupt_handler_1);
+    set_interrupt_descriptor(2, interrupt_handler_2);
+    set_interrupt_descriptor(3, interrupt_handler_3);
+    set_interrupt_descriptor(4, interrupt_handler_4);
+    set_interrupt_descriptor(5, interrupt_handler_5);
+    set_interrupt_descriptor(6, interrupt_handler_6);
+    set_interrupt_descriptor(7, interrupt_handler_7);
+    set_interrupt_descriptor(8, interrupt_handler_8);
+    set_interrupt_descriptor(9, interrupt_handler_9);
+    set_interrupt_descriptor(10, interrupt_handler_10);
+    set_interrupt_descriptor(11, interrupt_handler_11);
+    set_interrupt_descriptor(12, interrupt_handler_12);
+    set_interrupt_descriptor(13, interrupt_handler_13);
+    set_interrupt_descriptor(14, interrupt_handler_14);
+    set_interrupt_descriptor(15, interrupt_handler_15);
+    set_interrupt_descriptor(16, interrupt_handler_16);
+    set_interrupt_descriptor(17, interrupt_handler_17);
+    set_interrupt_descriptor(18, interrupt_handler_18);
+    set_interrupt_descriptor(19, interrupt_handler_19);
+    set_interrupt_descriptor(20, interrupt_handler_20);
+    set_interrupt_descriptor(21, interrupt_handler_21);
+    set_interrupt_descriptor(22, interrupt_handler_22);
+    set_interrupt_descriptor(23, interrupt_handler_23);
+    set_interrupt_descriptor(24, interrupt_handler_24);
+    set_interrupt_descriptor(25, interrupt_handler_25);
+    set_interrupt_descriptor(26, interrupt_handler_26);
+    set_interrupt_descriptor(27, interrupt_handler_27);
+    set_interrupt_descriptor(28, interrupt_handler_28);
+    set_interrupt_descriptor(29, interrupt_handler_29);
+    set_interrupt_descriptor(30, interrupt_handler_30);
+    set_interrupt_descriptor(31, interrupt_handler_31);
+    set_interrupt_descriptor(32, interrupt_handler_32);
+    set_interrupt_descriptor(33, interrupt_handler_33);
+    set_interrupt_descriptor(34, interrupt_handler_34);
+    set_interrupt_descriptor(35, interrupt_handler_35);
+    set_interrupt_descriptor(36, interrupt_handler_36);
+    set_interrupt_descriptor(37, interrupt_handler_37);
+    set_interrupt_descriptor(38, interrupt_handler_38);
+    set_interrupt_descriptor(39, interrupt_handler_39);
+    set_interrupt_descriptor(40, interrupt_handler_40);
+    set_interrupt_descriptor(41, interrupt_handler_41);
+    set_interrupt_descriptor(42, interrupt_handler_42);
+    set_interrupt_descriptor(43, interrupt_handler_43);
+    set_interrupt_descriptor(44, interrupt_handler_44);
+    set_interrupt_descriptor(45, interrupt_handler_45);
+    set_interrupt_descriptor(46, interrupt_handler_46);
+    set_interrupt_descriptor(47, interrupt_handler_47);
+
 
     // 256 个中断描述符，8 * 256 - 1 = 2047，即0x7ff
     // 虚拟地址加载IDT
