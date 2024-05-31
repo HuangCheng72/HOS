@@ -15,12 +15,10 @@ void kernel_main(void) {
     switch_esp_virtual_addr() ;
     // 初始化idt
     init_idt();
-    // 初始化内核必需的设备
-    init_device();
     // 初始化内存管理
     init_memory();
-
-
+    // 初始化所有设备
+    init_all_devices();
 
     // 进入内核主循环或其它初始化代码
     for(;;) {

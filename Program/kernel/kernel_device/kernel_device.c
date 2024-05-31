@@ -3,6 +3,7 @@
 //
 
 #include "kernel_device.h"
+#include "../kernel_interrupt/kernel_interrupt.h"
 
 // 驱动链表头结点
 struct list_node driver_list_head;

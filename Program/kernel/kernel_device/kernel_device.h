@@ -6,7 +6,6 @@
 #define HOS_KERNEL_DEVICE_H
 
 #include "../../lib/lib_kernel/lib_kernel.h"
-#include "../kernel_interrupt/kernel_interrupt.h"
 
 // 统一的驱动接口结构体（这个结构体的实例一律放在驱动段）
 struct driver {
