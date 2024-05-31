@@ -4,8 +4,6 @@
 
 #include "kernel_interrupt.h"
 
-#include "../../lib/lib_kernel/lib_kernel.h"
-
 // 这么大费周章的主要原因其实就一个，防止多次开/关中断
 // 如果开了中断就不要开了，如果关了中断就不要关了
 
@@ -59,4 +57,46 @@ enum intr_status intr_get_status() {
     uint32_t eflags = 0;
     GET_EFLAGS(eflags);
     return (EFLAGS_IF & eflags) ? INTR_ON : INTR_OFF;
+}
+
+// 禁用指定向量的中断（其实就是设置IMR，这里方便一点用位运算比较好）
+void disable_interrupt(uint8_t irq) {
+    uint16_t port;
+    uint8_t value;
+
+    if (irq < 8) {
+        // IRQ 0-7 由主片控制
+        port = 0x21;
+    } else {
+        // IRQ 8-15 由从片控制
+        port = 0xa1;
+        irq -= 8;
+    }
+    // 读取当前的中断屏蔽寄存器值
+    value = inb(port);
+    // 设置对应位来禁用中断
+    value |= (1 << irq);
+    // 写回中断屏蔽寄存器
+    outb(port, value);
+}
+
+// 启用指定向量的中断（其实就是设置IMR，这里方便一点用位运算比较好）
+void enable_interrupt(uint8_t irq) {
+    uint16_t port;
+    uint8_t value;
+
+    if (irq < 8) {
+        // IRQ 0-7 由主片控制
+        port = 0x21;
+    } else {
+        // IRQ 8-15 由从片控制
+        port = 0xa1;
+        irq -= 8;
+    }
+    // 读取当前的中断屏蔽寄存器值
+    value = inb(port);
+    // 清除对应位来启用中断
+    value &= ~(1 << irq);
+    // 写回中断屏蔽寄存器
+    outb(port, value);
 }
