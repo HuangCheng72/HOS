@@ -7,7 +7,7 @@
 #include "../interrupt_handler/interrupt_handler.h"
 
 
-// 仅用于PIC的中断处理逻辑数组
+// 中断处理逻辑数组
 void (*interrupt_handler_functions[256])(void) = { NULL };
 
 // 统一中断分发器

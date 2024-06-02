@@ -10,6 +10,7 @@ DEVICE_DIR = kernel_device
 INTERRUPT_DIR = kernel_interrupt
 INTERRUPT_HANDLER_DIR = interrupt_handler
 MEMORY_DIR = kernel_memory
+TASK_DIR = kernel_task
 
 # 源文件
 KERNEL_C_SRC = $(KERNEL_DIR)/kernel.c
@@ -28,7 +29,8 @@ KERNEL_OBJS = $(KERNEL_DIR)/kernel.o \
 				$(KERNEL_DIR)/kernel_device.o \
 				$(KERNEL_DIR)/kernel_interrupt.o \
 				$(KERNEL_DIR)/interrupt_handler.o \
-				$(KERNEL_DIR)/kernel_memory.o
+				$(KERNEL_DIR)/kernel_memory.o \
+				$(KERNEL_DIR)/kernel_task.o
 
 .PHONY: all
 
@@ -55,6 +57,10 @@ $(KERNEL_DIR)/interrupt_handler.o:
 
 $(KERNEL_DIR)/kernel_memory.o:
 	$(MAKE) -C $(MEMORY_DIR) GCC=$(GCC) AS=$(AS)
+
+$(KERNEL_DIR)/kernel_task.o:
+	$(MAKE) -C $(TASK_DIR) GCC=$(GCC) AS=$(AS) NASM=$(NASM)
+
 
 # C 文件生成 汇编文件，再汇编生成.o，为什么这么做之前说过了，这个gcc的汇编器不知道什么问题
 $(KERNEL_DIR)/kernel.o: $(KERNEL_C_SRC)

@@ -30,8 +30,8 @@
 // 一页大小4096字节，4KB
 #define PG_SIZE 0x1000
 
-// 页表结束的地方，就是内核堆内存开始的地方（物理位置）
-#define KERNEL_PHYSICAL_ADDR_START 0x00501000
+// 页表、位图结束的地方，就是内核堆内存开始的地方（物理位置）
+#define KERNEL_PHYSICAL_ADDR_START 0x00531000
 // 用户堆内存开始的地方就是内核堆内存结束的地方（物理位置）
 #define USER_PHYSICAL_ADDR_START 0x00800000
 // 内核虚拟地址起点（1MB以下全部被内核使用了，无法再用做堆内存了）

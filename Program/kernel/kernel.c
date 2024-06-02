@@ -4,6 +4,11 @@
 #include "kernel_idt/kernel_idt.h"
 #include "kernel_device/kernel_device.h"
 #include "kernel_memory/kernel_memory.h"
+#include "kernel_task/kernel_task.h"
+
+/* 两个都是在线程中运行的函数 */
+void k_thread_a(void* arg);
+void k_thread_b(void* arg);
 
 void kernel_main(void) {
 
@@ -20,9 +25,45 @@ void kernel_main(void) {
     init_memory(total_physical_memory);
     // 初始化所有设备
     init_all_devices();
+    // 初始化线程相关结构
+    init_multitasking();
+
+    task_create("k_thread_a", 31, k_thread_a, "argA ");
+    task_create("k_thread_b", 8, k_thread_b, "argB ");
+
+    // 允许PIC_IRQ0中断，才可以让定时器调度线程
+    enable_interrupt(0);
+    // 开启全局中断
+    intr_enable();
 
     // 进入内核主循环或其它初始化代码
     for(;;) {
+        task_switch();
+        put_str("MAIN");
+        for(uint32_t i = 0; i < UINT16_MAX; i++);
+    }
+    // 退出主循环卸载设备驱动
+    exit_all_devices();
+}
 
+/* 在线程中运行的函数 */
+void k_thread_a(void* arg) {
+/* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
+    char* para = arg;
+    while(1) {
+        task_switch();
+        put_str(para);
+        for(uint32_t i = 0; i < UINT16_MAX; i++);
+    }
+}
+
+/* 在线程中运行的函数 */
+void k_thread_b(void* arg) {
+/* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
+    char* para = arg;
+    while(1) {
+        task_switch();
+        put_str(para);
+        for(uint32_t i = 0; i < UINT16_MAX; i++);
     }
 }

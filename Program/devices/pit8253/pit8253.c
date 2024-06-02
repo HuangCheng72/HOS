@@ -3,6 +3,8 @@
 //
 
 #include "pit8253.h"
+#include "../../kernel/debug.h"
+#include "../../kernel/kernel_task/kernel_task.h"
 
 // 注册宏，定义一个驱动结构体，把驱动结构体实例放到驱动段
 REGISTER_DRIVER(pit8253_driver){
@@ -64,8 +66,10 @@ typedef union {
 } CountValue ;
 
 
+uint32_t ticks;          // ticks是内核自中断开启以来总共的嘀嗒数
+
 void init_pit8253() {
-    put_str("pit8253 initialization.\n");
+//    put_str("pit8253 initialization.\n");
     // 设置8253的定时周期,也就是发中断的周期
     PIT8253ControlWord controlWord = {
             .bcd = 0,                   // 16位二进制计数
@@ -80,11 +84,11 @@ void init_pit8253() {
     // 设置计数初始值（分两次写入）
     outb(CONTRER0_PORT, value.part.offset_low);
     outb(CONTRER0_PORT, value.part.offset_high);
-    put_str("pit8253 initialized.\n");
+//    put_str("pit8253 initialized.\n");
 }
 
 void exit_pit8253() {
-    put_str("pit8253 exiting......\n");
+//    put_str("pit8253 exiting......\n");
     // 设置8253的定时周期为0为停止模式
     PIT8253ControlWord controlWord = {
             .bcd = 0,                   // 16位二进制计数
@@ -99,9 +103,21 @@ void exit_pit8253() {
     value.value = 0;
     outb(CONTRER0_PORT, value.part.offset_low);
     outb(CONTRER0_PORT, value.part.offset_high);
-    put_str("pit8253 has exited.\n");
+//    put_str("pit8253 has exited.\n");
 }
 
 void interrupt_handler_pit8253() {
-    put_str("pit8253 irq.\n");
-};
+
+    struct task* cur_task = running_task();
+
+    cur_task->elapsed_ticks++;	  // 记录此线程占用的cpu时间嘀
+
+    ticks++;	  //从内核第一次处理时间中断后开始至今的滴哒数,内核态和用户态总共的嘀哒数
+
+    if (cur_task->ticks == 0) {	  // 若进程时间片用完就开始调度新的进程上cpu
+        task_schedule();
+    } else {				  // 将当前进程的时间片-1
+        cur_task->ticks--;
+    }
+
+}
