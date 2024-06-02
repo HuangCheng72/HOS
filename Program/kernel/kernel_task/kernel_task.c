@@ -18,10 +18,11 @@ extern void switch_to(struct task *cur, struct task *next);
 static struct list_node ready_list;
 static struct list_node all_task_list;
 
+// 因为KERNEL_TCB 也用不到，直接把这两个变量放到TCB里面去，直接放到最末尾
 // 当前正在运行的任务
-static struct task* current_task = NULL;
+static struct task* current_task = (struct task*)0x9fff7;
 // 将要运行的任务（下一个任务）
-static struct task* next_task = NULL;
+static struct task* next_task = (struct task*)0x9fffb;
 
 // 初始化任务调度系统
 void init_multitasking(void) {
@@ -147,7 +148,7 @@ void task_schedule(void) {
     }
 }
 
-// 任务切换（在调度器切换会导致跳出中断处理程序，必须要在各个执行流主循环切换）
+// 任务切换，在IRQ0中断处理函数末尾调用
 void task_switch(void){
     if (current_task == next_task) {
         // 无需切换，直接返回，不要浪费资源
@@ -158,7 +159,6 @@ void task_switch(void){
     // 如果不切换就跳不出来了，所以用一个临时变量来中继
     struct task *cur_task = current_task;
     current_task = next_task;
-
     // 真正切换任务了，进去就暂时出不来了
     switch_to(cur_task, next_task);
 }

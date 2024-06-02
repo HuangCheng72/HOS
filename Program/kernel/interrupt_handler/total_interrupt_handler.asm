@@ -9,6 +9,8 @@ SELECTOR_VIDEO equ (0x0003 << 3) + TI_GDT + RPL0
 section .text
 
 extern interrupt_dispatcher
+; 任务切换函数
+extern task_switch
 
 %macro interrupt_handler 2
 global interrupt_handler_%1
@@ -42,6 +44,11 @@ interrupt_handler_%1:
     pop ds
     popad                   ; 恢复所有通用寄存器
     sti                     ; 启用中断
+
+    %if %1 = 32
+        call task_switch    ; 只有IRQ0中断（中断号0x20，即32）需要切换任务
+    %endif
+
     iretd                   ; 恢复调用前的cs、eflags、eip
 %endmacro
 

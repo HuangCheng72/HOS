@@ -94,8 +94,6 @@ struct task *task_info(char *name);
 struct task* running_task(void);
 // 任务调度器
 void task_schedule(void);
-// 任务切换（在调度器切换会导致跳出中断处理程序，必须要在各个执行流主循环切换）
-void task_switch(void);
 // 多任务机制初始化
 void init_multitasking(void);
 
