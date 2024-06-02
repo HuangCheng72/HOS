@@ -2,14 +2,14 @@
 // Created by huangcheng on 2024/6/1.
 //
 
-#include "../kernel_task.h"
-#include "../../kernel_interrupt/kernel_interrupt.h"
-#include "../../kernel_memory/kernel_memory.h"
+#include "kernel_task.h"
+#include "../kernel_interrupt/kernel_interrupt.h"
+#include "../kernel_memory/kernel_memory.h"
 
 #define PG_SIZE 0x1000
 
-// 内核任务 PCB 的固定位置和栈位置
-#define KERNEL_PCB ((struct task*)0x9f000)
+// 内核任务 TCB 的固定位置和栈位置
+#define KERNEL_TCB ((struct task*)0x9f000)
 
 // 切换任务汇编
 extern void switch_to(struct task *cur, struct task *next);
@@ -29,24 +29,24 @@ void init_multitasking(void) {
     init_list_node(&all_task_list);
 
     // 初始化内核任务的 PCB（这一整页都直接清空）
-    memset(KERNEL_PCB, 0, PG_SIZE);
-    strcpy(KERNEL_PCB->name, "kernel");
+    memset(KERNEL_TCB, 0, PG_SIZE);
+    strcpy(KERNEL_TCB->name, "kernel");
     // 内核优先级为31，最高，运行时间也最长
-    KERNEL_PCB->priority = 31;
-    KERNEL_PCB->status = TASK_RUNNING;
-    KERNEL_PCB->ticks = 31;
-    KERNEL_PCB->elapsed_ticks = 0;
+    KERNEL_TCB->priority = 31;
+    KERNEL_TCB->status = TASK_RUNNING;
+    KERNEL_TCB->ticks = 31;
+    KERNEL_TCB->elapsed_ticks = 0;
     // 内核栈位置固定的，之前设好了（现在假设是在栈底，后面调度的时候会自动更新的）
-    KERNEL_PCB->self_stack = (uint8_t *)0xc0001500;
+    KERNEL_TCB->self_stack = (uint8_t *)0xc0001500;
     // 魔数防止栈越界
-    KERNEL_PCB->stack_magic = 0x20000702;
+    KERNEL_TCB->stack_magic = 0x20000702;
     // 因为现在肯定是内核在运行，所以不用加入到ready队列里面，加入到所有队列就行了
-    init_list_node(&KERNEL_PCB->general_tag);
-    list_add_tail(&KERNEL_PCB->all_task_tag, &all_task_list);
+    init_list_node(&KERNEL_TCB->general_tag);
+    list_add_tail(&KERNEL_TCB->all_task_tag, &all_task_list);
     // 将当前任务设置为内核任务
-    current_task = KERNEL_PCB;
+    current_task = KERNEL_TCB;
     // 还要运行很久，所以设置为下一个任务
-    next_task = KERNEL_PCB;
+    next_task = KERNEL_TCB;
 }
 
 // 函数包装器

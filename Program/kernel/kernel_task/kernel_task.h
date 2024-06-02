@@ -20,7 +20,7 @@ enum task_status {
     TASK_DIED
 };
 
-//PCB（程序控制块），表明这是一个任务（不管是进线程，都是任务）
+//TCB（任务控制块），表明这是一个任务（不管是进线程，都是任务）
 struct task {
     uint8_t *self_stack;	    // 各任务都用自己的栈（指向栈顶）
 
