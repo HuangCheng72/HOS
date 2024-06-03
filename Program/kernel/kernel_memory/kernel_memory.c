@@ -31,9 +31,15 @@
 #define PG_SIZE 0x1000
 
 // 页表、位图结束的地方，就是内核堆内存开始的地方（物理位置）
-#define KERNEL_PHYSICAL_ADDR_START 0x00531000
+// 由于不知道是不是页表位图后面还要放什么东西，干脆堆内存挪到0x00600000（6MB）开始
+// 预留更多位置
+#define KERNEL_PHYSICAL_ADDR_START 0x00600000
+// 相应地，怕不太够用，不然连几个内核任务都开不了，所以内核保留物理内存扩大到16MB
+// 16MB，有10MB的空余内存。一个内核任务的TCB要一页也就是4KB
+// 1MB可以开 1024 / 4 = 256个内核任务，10MB足够开2560个了
+
 // 用户堆内存开始的地方就是内核堆内存结束的地方（物理位置）
-#define USER_PHYSICAL_ADDR_START 0x00800000
+#define USER_PHYSICAL_ADDR_START 0x01000000
 // 内核虚拟地址起点（1MB以下全部被内核使用了，无法再用做堆内存了）
 #define KERNEL_VIRTUAL_ADDR_START 0xc0100000
 
