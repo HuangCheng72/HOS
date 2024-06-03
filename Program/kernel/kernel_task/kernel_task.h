@@ -2,8 +2,8 @@
 // Created by huangcheng on 2024/6/1.
 //
 
-#ifndef HOS_KERNEL_THREAD_H
-#define HOS_KERNEL_THREAD_H
+#ifndef HOS_KERNEL_TASK_H
+#define HOS_KERNEL_TASK_H
 
 #include "../../lib/lib_kernel/lib_kernel.h"
 
@@ -96,6 +96,9 @@ struct task* running_task(void);
 void task_schedule(void);
 // 多任务机制初始化
 void init_multitasking(void);
+// 阻塞当前调用的任务，并修改任务为指定状态（如果想不调度，就挂起、阻塞、等待）
+void task_block(enum task_status stat);
+// 将该任务状态修改为TASK_READY，并插入到调度队列最前，即解除阻塞并使其尽快进入工作状态
+void task_unblock(struct task *task);
 
-
-#endif //HOS_KERNEL_THREAD_H
+#endif //HOS_KERNEL_TASK_H

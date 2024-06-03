@@ -20,9 +20,9 @@ static struct list_node all_task_list;
 
 // 因为KERNEL_TCB 也用不到，直接把这两个变量放到TCB里面去，直接放到最末尾
 // 当前正在运行的任务
-static struct task* current_task = (struct task*)0x9fff7;
+static struct task* current_task = NULL;
 // 将要运行的任务（下一个任务）
-static struct task* next_task = (struct task*)0x9fffb;
+static struct task* next_task = NULL;
 
 // 初始化任务调度系统
 void init_multitasking(void) {
@@ -128,12 +128,21 @@ void task_schedule(void) {
     }
 
     if (current_task->status == TASK_RUNNING) { // 若此线程只是cpu时间片到了,将其加入到就绪队列尾
+        if(list_empty(&ready_list)) {
+            // 只有一个线程的特殊情况处理，只重置时间，减少开销
+            // 重新将当前线程的ticks再重置为其priority;
+            current_task->ticks = current_task->priority;
+            // 其他的什么都不要变，直接return
+            return;
+        }
         list_add_tail(&current_task->general_tag, &ready_list);
         current_task->ticks = current_task->priority;     // 重新将当前线程的ticks再重置为其priority;
         current_task->status = TASK_READY;
     } else {
-        /* 若此线程需要某事件发生后才能继续上cpu运行,
-        不需要将其加入队列,因为当前线程不在就绪队列中。*/
+        // 我怕你没删除，所以我无论如何都要删除一遍
+        // 总之你不是task_running，你就是其他的，那不准进入ready_list
+        // 所以保证不得留在ready_list里面
+        list_del(&current_task->general_tag);
     }
 
     if(list_empty(&ready_list)) {
@@ -161,4 +170,45 @@ void task_switch(void){
     current_task = next_task;
     // 真正切换任务了，进去就暂时出不来了
     switch_to(cur_task, next_task);
+}
+
+// 阻塞当前调用的任务，并修改任务为指定状态（如果想不调度，就挂起、阻塞、等待）
+void task_block(enum task_status stat) {
+    // 关闭中断，保存先前状态
+    enum intr_status old_status = intr_disable();
+    // 获取现在正在进行的任务（可能更新不及时，注意）
+    struct task *cur_task = current_task;
+    // 修改状态
+    cur_task->status = stat;
+    // 调度新任务
+    task_schedule();
+    // 手动强行调度
+    task_switch();
+    // 任务阻塞解除才会调用这句重设状态语句
+    intr_set_status(old_status);
+}
+
+void task_unblock(struct task *task) {
+    // 惯例，关中断
+    enum intr_status old_status = intr_disable();
+    // 只要不是READY或者RUNNING（怕出意外），都重设为READY
+    if (task->status != TASK_READY && task->status != TASK_RUNNING) {
+        // 检查是否已经在ready_list中
+        struct list_node *pos;
+        list_for_each(pos, &ready_list) {
+            if (pos == &task->general_tag) {
+                put_str("Task already in ready_list\n");
+                for(;;);
+            }
+        }
+
+        // 我怕你没删除，所以我无论如何都要删除一遍
+        list_del(&task->general_tag);
+        // 插入任务到ready_list队头，尽快被调度
+        list_add(&task->general_tag, &ready_list);
+        task->status = TASK_READY;
+
+    }
+    // 操作完成重设状态（谁知道原来是不是也是关中断）
+    intr_set_status(old_status);
 }
