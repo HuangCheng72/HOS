@@ -3,9 +3,10 @@
 DEVICE_DIR = .
 PIT8253_DIR = pit8253
 CONSOLE_DIR = console
+KEYBOARD_DIR = keyboard
 
 # 标签标记所有的任务（输出什么文件），方便修改
-DEVICE_OBJS = pit8253.o console.o
+DEVICE_OBJS = pit8253.o console.o keyboard.o
 
 .PHONY: all
 
@@ -17,6 +18,9 @@ pit8253.o:
 
 console.o:
 	$(MAKE) -C $(CONSOLE_DIR) GCC=$(GCC) AS=$(AS)
+
+keyboard.o:
+	$(MAKE) -C $(KEYBOARD_DIR) GCC=$(GCC) AS=$(AS)
 
 # 清理规则
 clean:
