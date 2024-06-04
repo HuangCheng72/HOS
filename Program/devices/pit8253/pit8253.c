@@ -13,8 +13,7 @@ REGISTER_DRIVER(pit8253_driver){
     .exit = exit_pit8253,
     .irq = 0,
     .irq_interrupt_handler = interrupt_handler_pit8253,
-    .read = NULL,
-    .write = NULL,
+    .need_kernel_buffer = 0,    // 明确不需要缓冲区，其实不写也行，初始值就是0
 };
 
 #define IRQ0_FREQUENCY	   100
@@ -69,7 +68,7 @@ typedef union {
 uint32_t ticks;          // ticks是内核自中断开启以来总共的嘀嗒数
 
 void init_pit8253() {
-//    put_str("pit8253 initialization.\n");
+
     // 设置8253的定时周期,也就是发中断的周期
     PIT8253ControlWord controlWord = {
             .bcd = 0,                   // 16位二进制计数
@@ -84,11 +83,11 @@ void init_pit8253() {
     // 设置计数初始值（分两次写入）
     outb(CONTRER0_PORT, value.part.offset_low);
     outb(CONTRER0_PORT, value.part.offset_high);
-//    put_str("pit8253 initialized.\n");
+
 }
 
 void exit_pit8253() {
-//    put_str("pit8253 exiting......\n");
+
     // 设置8253的定时周期为0为停止模式
     PIT8253ControlWord controlWord = {
             .bcd = 0,                   // 16位二进制计数
@@ -103,7 +102,7 @@ void exit_pit8253() {
     value.value = 0;
     outb(CONTRER0_PORT, value.part.offset_low);
     outb(CONTRER0_PORT, value.part.offset_high);
-//    put_str("pit8253 has exited.\n");
+
 }
 
 void interrupt_handler_pit8253() {

@@ -53,6 +53,5 @@ REGISTER_DRIVER(console_driver){
         .exit = NULL,
         .irq = -1,
         .irq_interrupt_handler = NULL,
-        .read = NULL,
-        .write = NULL,
+        .need_kernel_buffer = 0    // 明确不需要缓冲区，其实不写也行，初始值就是0
 };
