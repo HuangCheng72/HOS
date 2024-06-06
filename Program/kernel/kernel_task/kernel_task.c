@@ -20,15 +20,10 @@ extern void switch_to(struct task *cur, struct task *next);
 static struct list_node ready_list;
 static struct list_node all_task_list;
 
-// 因为KERNEL_TCB 也用不到，直接把这两个变量放到TCB里面去，直接放到最末尾
 // 当前正在运行的任务
 static struct task* current_task = NULL;
 // 将要运行的任务（下一个任务）
 static struct task* next_task = NULL;
-
-// 为了保存信息而已
-//管理内核的虚拟地址
-extern Virtual_Addr kernel_virtual_addr;
 
 // 初始化任务调度系统
 void init_multitasking(void) {
