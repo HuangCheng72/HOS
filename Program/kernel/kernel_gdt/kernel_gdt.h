@@ -178,8 +178,8 @@ struct TSS {
 #define SELECTOR_K_VIDEO    ((3 << 3) + (TI_GDT << 2) + RPL0)   // 系统视频段
 
 #define SELECTOR_TSS        ((4 << 3) + (TI_GDT << 2) + RPL0)   // TSS段
-#define SELECTOR_U_CODE     ((5 << 3) + (TI_GDT << 2) + RPL3)   // 用户代码段
-#define SELECTOR_U_DATA     ((6 << 3) + (TI_GDT << 2) + RPL3)   // 用户数据段
+#define SELECTOR_U_CODE     ((5 << 3) + (TI_GDT << 2) + RPL2)   // 用户代码段
+#define SELECTOR_U_DATA     ((6 << 3) + (TI_GDT << 2) + RPL2)   // 用户数据段
 #define SELECTOR_U_STACK    SELECTOR_U_DATA                     // 用户堆栈段
 
 #endif //HOS_KERNEL_GDT_H

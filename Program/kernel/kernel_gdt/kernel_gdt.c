@@ -71,10 +71,10 @@ void setup_gdt() {
     // 用户态的代码段，先复制过来，然后修改
     *(uint64_t *)(new_gdt + 5) = *(uint64_t *)(new_gdt + 1);
     // 改成最低特权级就行了
-    new_gdt[5].dpl = DESC_DPL3;
+    new_gdt[5].dpl = DESC_DPL2;
     // 用户态数据段一样
     *(uint64_t *)(new_gdt + 6) = *(uint64_t *)(new_gdt + 2);
-    new_gdt[6].dpl = DESC_DPL3;
+    new_gdt[6].dpl = DESC_DPL2;
 
     // 用虚拟地址重新加载GDT
     load_gdt(32 * 8 - 1, NEW_GDT_BASE_ADDR + HIGH_ADDR_OFFSET);
