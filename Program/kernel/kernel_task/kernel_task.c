@@ -5,6 +5,8 @@
 #include "kernel_task.h"
 #include "../kernel_interrupt/kernel_interrupt.h"
 #include "../kernel_memory/kernel_memory.h"
+#include "../kernel_page/kernel_page.h"
+#include "../kernel_gdt/kernel_gdt.h"
 
 #define PG_SIZE 0x1000
 
@@ -23,6 +25,10 @@ static struct list_node all_task_list;
 static struct task* current_task = NULL;
 // 将要运行的任务（下一个任务）
 static struct task* next_task = NULL;
+
+// 为了保存信息而已
+//管理内核的虚拟地址
+extern Virtual_Addr kernel_virtual_addr;
 
 // 初始化任务调度系统
 void init_multitasking(void) {
@@ -44,6 +50,11 @@ void init_multitasking(void) {
     // 因为现在肯定是内核在运行，所以不用加入到ready队列里面，加入到所有队列就行了
     init_list_node(&KERNEL_TCB->general_tag);
     list_add_tail(&KERNEL_TCB->all_task_tag, &all_task_list);
+
+    // 内核的页表所在（为了方便切换）
+    KERNEL_TCB->pgdir = PAGE_DIR_TABLE_POS;
+    // 内核的虚拟位图信息在内存管理初始化的时候写入
+
     // 将当前任务设置为内核任务
     current_task = KERNEL_TCB;
     // 还要运行很久，所以设置为下一个任务
@@ -78,7 +89,10 @@ struct task* task_create(char* name, int priority, task_function function, void*
     // 预留任务信息栈位置
     new_task->self_stack -= sizeof(struct task_info_stack);
 
-    // 其他的都清空了，现在不用初始化
+    // 内核线程默认为和内核用同样的资源（如果要创建为用户进程分配新的资源，再自己修改）
+    new_task->pgdir = KERNEL_TCB->pgdir;
+    // 位图也复制内核的位图（结构体等于运算直接浅拷贝）
+    new_task->process_virtual_address = KERNEL_TCB->process_virtual_address;
 
     // 这些说白了是任务第一次上CPU运行的时候需要设置的，后面就会自动保存新的
     ((struct task_info_stack*)new_task->self_stack)->ret_addr = &func_wrapper;
@@ -92,15 +106,27 @@ struct task* task_create(char* name, int priority, task_function function, void*
     return new_task;
 }
 
-// 取消任务
+// 取消任务（线程不回收资源，页表和位图进程自己回收）
 void task_cancel(struct task* task) {
     if(task == current_task) {
         // 这里要等任务完成才能删除，不知道该怎么写，先return了
         return;
     }
+    if(task == KERNEL_TCB) {
+        // 内核任务不得删除
+        return;
+    }
+    // 关闭中断防止切换
+    enum intr_status old_status = intr_disable();
+    if(next_task == task) {
+        // 碰上这种情况，直接切成current
+        next_task = current_task;
+    }
     list_del(&task->general_tag);
     list_del(&task->all_task_tag);
-    free_page(KERNEL_FLAG, task, 1);
+    free_page(task, 1);
+    // 恢复先前状态
+    intr_set_status(old_status);
 }
 
 // 通过名字获取任务
@@ -168,6 +194,22 @@ void task_switch(void){
     // 如果不切换就跳不出来了，所以用一个临时变量来中继
     struct task *cur_task = current_task;
     current_task = next_task;
+    // 是否切换页目录表？
+    if(next_task->pgdir && get_current_page() != next_task->pgdir) {
+        // 下一个任务页目录表不为空，而且页目录表还不是当前cr3寄存器里的页目录表，才准许加载下一个任务的页目录表到cr3寄存器
+        load_page_directory(next_task->pgdir);
+    }
+    // 内核线程用的是自己的任务信息栈存信息，不用怕改动tss的值
+    // tss主要是用在进程的切换上，是要变动特权级的的时候才会起作用
+    // 之前为了保证统一，内核线程初始化的时候把pgdir置为内核页表
+    // 在这里，如果从内核线程切换到用户进程，变动tss是必要的
+    // 如果从用户进程切换到内核线程，变动tss也是有必要的
+    // 不变动特权级比如内核线程到内核线程，用户进程到用户进程，变动tss并无必要
+    // 懒得区分，我又把pgdir都初始化了，干脆不管了，全都变动
+
+    // 变动tss的esp0（特权级0的栈的指针到下一个内核任务的栈底，这是每个内核任务必然拥有的特权级0的栈
+    ((struct TSS *)TSS_ADDR)->esp0 = (uint32_t)next_task + PG_SIZE;
+
     // 真正切换任务了，进去就暂时出不来了
     switch_to(cur_task, next_task);
 }

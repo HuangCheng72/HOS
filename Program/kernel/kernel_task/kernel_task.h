@@ -6,6 +6,7 @@
 #define HOS_KERNEL_TASK_H
 
 #include "../../lib/lib_kernel/lib_kernel.h"
+#include "../kernel_memory/kernel_memory.h"
 
 // 任务函数，等效于 void (*)(void*) 类型
 typedef void task_function(void*);
@@ -34,12 +35,12 @@ struct task {
     struct list_node general_tag;   // 当前串在哪个调度队列上
     struct list_node all_task_tag;  // 所有任务都串在一起，这是为了保证任何时候都能找到
 
-    uint32_t* pgdir;            // 页表的地址（分配这个资源的时候就是进程了）
-
+    uint32_t pgdir;            // 页表的物理地址（单独分配这个资源的时候就是进程了）
+    Virtual_Addr process_virtual_address;  // 用户进程的虚拟地址资源，申请内存的时候需要
     uint32_t stack_magic;	    // 用这串数字做栈的边界标记,用于检测任务栈的溢出
 };
 
-// 中断栈数据
+// 中断栈数据（叫中断栈，一个是因为它真的存储中断数据，而是用其模拟中断处理恢复上下文的手段进入用户态）
 struct interrupt_stack {
     uint32_t interrupt_number;  // 中断号
     uint32_t manual_error_code; // 手动压栈的错误码 (如果没有错误码，这里存储0)
@@ -50,15 +51,15 @@ struct interrupt_stack {
     uint32_t edi;        // 目标变址寄存器 EDI
     uint32_t esi;        // 源变址寄存器 ESI
     uint32_t ebp;        // 基址指针寄存器 EBP
-    uint32_t esp_dummy;  // 栈指针寄存器 ESP（不会真的恢复到ESP，所以只是个摆设）
+    uint32_t esp;        // 栈指针寄存器 ESP（这个没什么用，用不到的）
     uint32_t ebx;        // 通用寄存器 EBX
     uint32_t edx;        // 通用寄存器 EDX
     uint32_t ecx;        // 通用寄存器 ECX
     uint32_t eax;        // 通用寄存器 EAX
-    uint32_t error_code; // 错误码 (如果没有错误码，这里存储0)
-    uint32_t eflags;     // 标志寄存器
-    uint32_t cs;         // 代码段寄存器
+    uint32_t error_code; // CPU自动压栈的错误码 (可能有，也可能没有，但是从内核态跳入用户态的时候绝对没有)
     uint32_t eip;        // 指令指针寄存器
+    uint32_t cs;         // 代码段寄存器
+    uint32_t eflags;     // 标志寄存器
     uint32_t user_esp;   // 低特权级进入高特权级的时候CPU自动压的栈指针 ESP
     uint32_t user_ss;    // 低特权级进入高特权级的时候CPU自动压的栈段选择子 SS
 };
