@@ -30,7 +30,7 @@ void kernel_buffer_free(struct kernel_buffer *k_buf) {
     // 用位运算方式取低12位，如果低12位全部是0，那么就是有效的，可以回收
     // NULL的情况，free_page里面有判断，不用再判断了
     if(((uint32_t)k_buf & 0xFFF) == 0) {
-        free_page(KERNEL_FLAG,(void *)k_buf, 1);
+        free_page((void *)k_buf, 1);
     }
 }
 

@@ -25,7 +25,7 @@ void init_memory(uint32_t total_physical_memory);
 // 申请以页为单位的内存
 void* malloc_page(MemoryRequesterType type, uint32_t pg_cnt);
 // 以页为单位归还内存
-void free_page(MemoryRequesterType type, void* vaddr, uint32_t pg_cnt);
+void free_page(void* vaddr, uint32_t pg_cnt);
 
 
 #endif //HOS_KERNEL_MEMORY_H
