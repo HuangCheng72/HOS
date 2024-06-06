@@ -12,10 +12,13 @@
 
 // 这个文件存在的意义主要就是为了声明汇编暴露的函数，加上type.h可以为系统各组件提供统一的支持
 
-// 载入页目录，load_page_directory.asm
-extern void load_page_directory(uint32_t* page_directory);
-// 启用分页，enable_paging.asm
+// 载入页目录表，paging_ops.asm
+extern void load_page_directory(uint32_t page_directory_addr);
+// 启用分页，paging_ops.asm
 extern void enable_paging();
+// 获取cr3寄存器中的当前页表，paging_ops.asm
+extern uint32_t get_current_page(void);
+
 // 加载GDT，load_gdt.asm
 extern void load_gdt(uint16_t limit, uint32_t base);
 // 设置esp，switch_esp_virtual_addr.asm
@@ -36,5 +39,7 @@ extern void outsw(uint16_t port, const void* addr, uint32_t word_cnt);
 extern uint8_t inb(uint16_t port);
 // 将从端口port读入的word_cnt个字写入addr。io.asm
 extern void insw(uint16_t port, void* addr, uint32_t word_cnt);
+// 加载TSS，参数是TSS的段选择子
+extern void load_tss(uint16_t tss_selector);
 
 #endif //HOS_LIB_H
