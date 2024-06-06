@@ -16,6 +16,7 @@ BOOT_DIR = boot
 KERNEL_DIR = kernel
 LIB_DIR = lib
 DEVICE_DIR = devices
+USER_DIR = user
 
 # 输出文件
 KERNEL_BIN = $(KERNEL_DIR)/kernel.bin
@@ -37,10 +38,14 @@ compile:
 	$(MAKE) -C $(LIB_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(KERNEL_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(DEVICE_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+	$(MAKE) -C $(USER_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 
 # 链接生成 kernel.bin
 link:
-	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(wildcard $(KERNEL_DIR)/*.o) $(wildcard $(LIB_DIR)/*.o) $(wildcard $(DEVICE_DIR)/*.o)
+	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(wildcard $(KERNEL_DIR)/*.o) \
+										$(wildcard $(LIB_DIR)/*.o) \
+										$(wildcard $(DEVICE_DIR)/*.o) \
+										$(wildcard $(USER_DIR)/*.o)
 
 
 clean:
@@ -48,3 +53,4 @@ clean:
 	$(MAKE) -C $(KERNEL_DIR) clean
 	$(MAKE) -C $(LIB_DIR) clean
 	$(MAKE) -C $(DEVICE_DIR) clean
+	$(MAKE) -C $(USER_DIR) clean
