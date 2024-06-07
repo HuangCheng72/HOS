@@ -20,6 +20,9 @@ extern void switch_to(struct task *cur, struct task *next);
 static struct list_node ready_list;
 static struct list_node all_task_list;
 
+// 死亡任务队列（暂时还没关闭的任务都在里面）
+static struct list_node died_list;
+
 // 当前正在运行的任务
 static struct task* current_task = NULL;
 // 将要运行的任务（下一个任务）
@@ -29,6 +32,7 @@ static struct task* next_task = NULL;
 void init_multitasking(void) {
     init_list_node(&ready_list);
     init_list_node(&all_task_list);
+    init_list_node(&died_list);
 
     // 初始化内核任务的 PCB（这一整页都直接清空）
     memset(KERNEL_TCB, 0, PG_SIZE);
@@ -103,8 +107,18 @@ struct task* task_create(char* name, int priority, task_function function, void*
 
 // 取消任务（线程不回收资源，页表和位图进程自己回收）
 void task_cancel(struct task* task) {
+    if(task == NULL) {
+        return;
+    }
     if(task == current_task) {
-        // 这里要等任务完成才能删除，不知道该怎么写，先return了
+        // 这里要等任务完成才能删除
+        // 标记其等待删除，让任务调度器删掉
+        task->status = TASK_DIED;
+        // current_task本来就不应该在ready_list里面
+        // 但是怕了，还是先删一遍
+        list_del(&task->general_tag);
+        // 加入到死亡队列
+        list_add_tail(&task->general_tag, &died_list);
         return;
     }
     if(task == KERNEL_TCB) {
@@ -148,6 +162,17 @@ void task_schedule(void) {
         for(;;);
     }
 
+    // 清理死亡队列里的任务
+    struct list_node *pos;
+    struct task* tmp_task;
+    list_for_each(pos, &died_list) {
+        tmp_task = list_entry(pos, struct task, general_tag);
+        list_del(&tmp_task->general_tag);
+        list_del(&tmp_task->all_task_tag);
+        // 释放TCB
+        free_page(tmp_task, 1);
+    }
+
     if (current_task->status == TASK_RUNNING) { // 若此线程只是cpu时间片到了,将其加入到就绪队列尾
         if(list_empty(&ready_list)) {
             // 只有一个线程的特殊情况处理，只重置时间，减少开销
@@ -174,7 +199,7 @@ void task_schedule(void) {
         next_task = list_entry(ready_list.next, struct task, general_tag);
         next_task->status = TASK_RUNNING;
 
-        // 因为切换之后会直接跳出中断处理程序，所以绝不能在这里切换，必须要在内核主循环切换
+        // 因为切换之后会直接跳出中断处理程序，所以绝不能在这里切换，必须要在中断切换
     }
 }
 
