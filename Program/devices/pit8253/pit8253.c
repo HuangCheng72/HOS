@@ -13,7 +13,6 @@ REGISTER_DRIVER(pit8253_driver){
     .exit = exit_pit8253,
     .irq = 0,
     .irq_interrupt_handler = interrupt_handler_pit8253,
-    .need_kernel_buffer = 0,    // 明确不需要缓冲区，其实不写也行，初始值就是0
 };
 
 #define IRQ0_FREQUENCY	   100

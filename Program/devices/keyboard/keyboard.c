@@ -245,13 +245,12 @@ REGISTER_DRIVER(keyboard_driver){
         .exit = NULL,
         .irq = 1,
         .irq_interrupt_handler = interrupt_keyboard_handler,
-        .need_kernel_buffer = 1,    // 需要缓冲区，必须要分配缓冲区
-        .buffer = NULL              // 需要分配缓冲区，所以直接清空，这也是是否分配缓冲区的判断条件
+        .need_input_buffer = 1,    // 需要输入缓冲区
 };
 
 /* 键盘初始化 */
 void keyboard_init() {
-    keyboard_buffer = keyboard_driver.buffer;
+    keyboard_buffer = keyboard_driver.input_buffer;
     // 如果分配不到缓冲区，初始化失败
     if(!keyboard_buffer) {
         put_str("\nkeyboard_init_fail!\n");
