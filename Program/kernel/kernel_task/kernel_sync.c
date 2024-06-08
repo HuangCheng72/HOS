@@ -20,7 +20,8 @@ void semaphore_init(struct semaphore* psema, uint32_t value) {
 
 // 信号量的P操作（等待，信号量减1）
 void semaphore_wait(struct semaphore *psema) {
-    intr_disable(); // 关闭中断，防止上下文切换
+    // 关闭中断，防止上下文切换
+    enum intr_status old_status = intr_disable();
 
     // 没有使用权，必须阻塞
     // 用循环的原因是害怕解锁之后还是没得到资源使用权（被抢走了）
@@ -38,14 +39,15 @@ void semaphore_wait(struct semaphore *psema) {
     }
     // 获取使用权
     psema->value--;
-    // 开启中断（不开启中断的话，无法触发中断处理程序调度任务）
-    intr_enable();
+    // 恢复先前状态
+    intr_set_status(old_status);
 }
 
 
 // 信号量的V操作（信号，信号量加1）
 void semaphore_signal(struct semaphore* psema) {
-    intr_disable(); // 关闭中断，防止上下文切换
+    // 关闭中断，防止上下文切换
+    enum intr_status old_status = intr_disable();
 
     // 只要有
     if (!list_empty(&psema->waiters)) {
@@ -61,8 +63,8 @@ void semaphore_signal(struct semaphore* psema) {
 
     // 释放使用权
     psema->value++;
-    // 开启中断（不开启中断的话，无法触发中断处理程序调度任务）
-    intr_enable();
+    // 恢复先前状态
+    intr_set_status(old_status);
 }
 
 // 互斥锁初始化
