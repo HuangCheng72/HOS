@@ -209,6 +209,11 @@ void init_idt() {
     set_interrupt_descriptor(47, interrupt_handler_47);
 
 
+    // 注册系统调用的0x80号中断处理函数（这个不太一样，这个是要求用户进程也能发起的，所以需要修改dpl为用户级，允许用户发起中断）
+    // Windows版本的Bochs不知道为什么，最低只能到特权级2，到了3死活不行
+    set_interrupt_descriptor(0x80, syscall_handler);
+    ((InterruptDescriptor *)IDT_BASE_ADDR + 0x80)->dpl = 2;
+
     // 256 个中断描述符，8 * 256 - 1 = 2047，即0x7ff
     // 虚拟地址加载IDT
     load_idt( 256 * 8 - 1 ,IDT_BASE_ADDR + HIGH_ADDR_OFFSET);

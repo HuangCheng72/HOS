@@ -61,3 +61,58 @@ interrupt_handler_%1:
     %endif
     %assign i i+1
 %endrep
+
+; 定义0x80号系统调用中断处理程序
+global syscall_handler
+
+; C里面写的系统调用分发器（见syscall_dispatcher.c）
+extern syscall_dispatcher
+
+syscall_handler:
+    ; 防止嵌套中断，要关闭中断
+    cli
+
+    pushad
+    push ds
+    push es
+    push fs
+    push gs
+    ; 把这几个置换为内核态的段选择子
+    mov ax, SELECTOR_DATA
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov ax, SELECTOR_VIDEO
+    mov gs, ax
+
+    ; ---------    老规矩，中断开始处理前保存上下文，重新加载段选择子    ---------
+
+    ; --------------- 这里是配合系统调用分发器的设计 ---------------
+
+    push edi                ; 第四个参数
+    push esi                ; 第三个参数
+    push edx                ; 第二个参数
+    push ecx                ; 第一个参数
+    push ebx                ; 系统调用号
+
+    call syscall_dispatcher ; 调用C里的系统调用分发器
+
+    add esp, 20             ; 清理栈上的参数（五个，一共是20字节）
+
+    ; 将返回值存到栈上先前保存eax的位置，这样等下就可以弹栈弹回来了
+    ; 8个通用寄存器和4个段寄存器，一共12个都是4字节
+    ; eax是第一个保存的（所以偏移11 * 4，它的低地址有11个寄存器的值，mov的方向是从低地址到高地址）
+    mov [esp + 11 * 4], eax
+
+   ; ---------    老规矩，中断处理完毕恢复上下文    ---------
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popad
+
+    sti
+
+    ; 数据是CPU自动帮我们压栈的，直接iretd弹回去就是了
+    ; 回到用户态
+    iretd

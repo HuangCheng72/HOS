@@ -57,5 +57,8 @@ extern void interrupt_handler_45();
 extern void interrupt_handler_46();
 extern void interrupt_handler_47();
 
+// 系统调用使用的0x80号中断处理函数
+extern void syscall_handler();
+
 
 #endif //HOS_INTERRUPT_HANDLER_H

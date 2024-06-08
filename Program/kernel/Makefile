@@ -55,7 +55,7 @@ $(KERNEL_DIR)/kernel_interrupt.o:
 	$(MAKE) -C $(INTERRUPT_DIR) GCC=$(GCC) AS=$(AS)
 
 $(KERNEL_DIR)/interrupt_handler.o:
-	$(MAKE) -C $(INTERRUPT_HANDLER_DIR) NASM=$(NASM)
+	$(MAKE) -C $(INTERRUPT_HANDLER_DIR) NASM=$(NASM) GCC=$(GCC) AS=$(AS)
 
 $(KERNEL_DIR)/kernel_memory.o:
 	$(MAKE) -C $(MEMORY_DIR) GCC=$(GCC) AS=$(AS)
