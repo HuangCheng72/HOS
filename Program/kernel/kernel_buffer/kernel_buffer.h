@@ -18,6 +18,8 @@ struct kernel_buffer {
     uint32_t read_pos;         // 读位置
     uint32_t write_pos;        // 写位置
 
+    uint8_t is_full;              // 缓冲区是否已满的标志位
+
     struct mutex mutex;        // 互斥锁，保护缓冲区访问
     struct semaphore writable; // 可写信号量，表示空闲空间数量
     struct semaphore readable; // 可读信号量，表示已填充数据数量
@@ -31,6 +33,8 @@ void kernel_buffer_free(struct kernel_buffer *k_buf);
 void kernel_buffer_write(struct kernel_buffer *k_buf, char *data, uint32_t size);
 // 从内核缓冲区读取数据，读size个字节到data，size不得大于4000，建议在2048以内（由消费者调用，读时生产者被阻塞）
 void kernel_buffer_read(struct kernel_buffer *k_buf, char *data, uint32_t size);
+// 判断缓冲区是否为空
+uint8_t kernel_buffer_is_empty(struct kernel_buffer *k_buf);
 
 
 #endif //HOS_KERNEL_BUFFER_H

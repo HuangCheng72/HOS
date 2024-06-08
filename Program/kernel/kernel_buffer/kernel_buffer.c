@@ -18,6 +18,7 @@ struct kernel_buffer* kernel_buffer_create(void) {
     k_buf->data = ((uint8_t *)page_addr + sizeof(struct kernel_buffer));
     k_buf->read_pos = 0;
     k_buf->write_pos = 0;
+    k_buf->is_full = 0;
     k_buf->size = PAGE_SIZE - sizeof(struct kernel_buffer);
     mutex_init(&k_buf->mutex);
     semaphore_init(&k_buf->writable, k_buf->size);      // 初始空闲空间为缓冲区大小
@@ -47,6 +48,8 @@ void kernel_buffer_write(struct kernel_buffer *k_buf, char *data, uint32_t size)
         k_buf->data[k_buf->write_pos] = data[i];
         k_buf->write_pos = (k_buf->write_pos + 1) % k_buf->size;
 
+        k_buf->is_full = (k_buf->write_pos == k_buf->read_pos); // 更新is_full标志
+
         mutex_unlock(&k_buf->mutex);        // 解锁缓冲区
         semaphore_signal(&k_buf->readable); // 通知有新数据可读
     }
@@ -65,7 +68,14 @@ void kernel_buffer_read(struct kernel_buffer *k_buf, char *data, uint32_t size) 
         data[i] = k_buf->data[k_buf->read_pos];
         k_buf->read_pos = (k_buf->read_pos + 1) % k_buf->size;
 
+        k_buf->is_full = 0; // 更新is_full标志
+
         mutex_unlock(&k_buf->mutex);        // 解锁缓冲区
         semaphore_signal(&k_buf->writable); // 通知有可写空间
     }
+}
+
+// 判断缓冲区是否为空
+uint8_t kernel_buffer_is_empty(struct kernel_buffer *k_buf) {
+    return (k_buf->read_pos == k_buf->write_pos && !k_buf->is_full);
 }
