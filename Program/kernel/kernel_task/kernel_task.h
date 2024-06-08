@@ -26,7 +26,7 @@ struct task {
     uint8_t *self_stack;	    // 各任务都用自己的栈（指向栈顶）
 
     enum task_status status;    // 任务状态，这个不用说
-    char name[16];              // 任务名（未来可以改成全局唯一ID）
+    char name[64];              // 任务名（未来可以改成全局唯一ID）
     uint8_t priority;           // 优先级
     uint8_t ticks;	            // 每次在处理器上执行的时间嘀嗒数（一个ticks即定时器IRQ0中断一次，决定什么时候调度任务）
 
