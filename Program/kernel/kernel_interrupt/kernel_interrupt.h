@@ -19,8 +19,8 @@ enum intr_status intr_enable (void);
 enum intr_status intr_disable (void);
 
 // 启用指定向量的中断
-void enable_interrupt(uint8_t irq);
+void enable_pic_irq_interrupt(uint8_t irq);
 // 禁用指定向量的中断
-void disable_interrupt(uint8_t irq);
+void disable_pic_irq_interrupt(uint8_t irq);
 
 #endif //HOS_INTERRUPT_H

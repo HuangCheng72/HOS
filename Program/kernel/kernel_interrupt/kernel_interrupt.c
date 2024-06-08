@@ -60,7 +60,7 @@ enum intr_status intr_get_status() {
 }
 
 // 禁用指定向量的中断（其实就是设置IMR，这里方便一点用位运算比较好）
-void disable_interrupt(uint8_t irq) {
+void disable_pic_irq_interrupt(uint8_t irq) {
     uint16_t port;
     uint8_t value;
 
@@ -81,7 +81,7 @@ void disable_interrupt(uint8_t irq) {
 }
 
 // 启用指定向量的中断（其实就是设置IMR，这里方便一点用位运算比较好）
-void enable_interrupt(uint8_t irq) {
+void enable_pic_irq_interrupt(uint8_t irq) {
     uint16_t port;
     uint8_t value;
 
