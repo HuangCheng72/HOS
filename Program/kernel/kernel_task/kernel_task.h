@@ -67,11 +67,15 @@ struct interrupt_stack {
 
 // 任务信息栈，用于保存一个任务切换时候的状态
 struct task_info_stack {
-    // 这四个通用寄存器会被切换到新任务的数据，所以要在这里保存（我们手动压的）
-    uint32_t ebp;        // 用于保存切换时的EBP寄存器值
-    uint32_t ebx;        // 用于保存切换时的EBX寄存器值
+    // 为了保存用户状态，需要保存八个通用寄存器的值
     uint32_t edi;        // 用于保存切换时的EDI寄存器值
     uint32_t esi;        // 用于保存切换时的ESI寄存器值
+    uint32_t ebp;        // 用于保存切换时的EBP寄存器值
+    uint32_t esp;        // 用于保存切换时的ESP寄存器值（这个没什么用，cpu会自动调整）
+    uint32_t ebx;        // 用于保存切换时的EBX寄存器值
+    uint32_t edx;        // 用于保存切换时的EDX寄存器值
+    uint32_t ecx;        // 用于保存切换时的ECX寄存器值
+    uint32_t eax;        // 用于保存切换时的EAX寄存器值
 
     // 首次上CPU的时候需要设置，后面就自动调整了
     // 在栈里，这就是所谓的返回地址，pop掉上面四个之后，ret的时候直接jmp这个地址，以此实现任务切换
