@@ -123,6 +123,27 @@ extern void switch_to_user_mode();
 // switch_to_user_mode就是这么编写的
 // 本质上和线程切换任务的方式类似，让iretd指令帮助我们自动跳进入口函数
 
+// 用一个包装函数，来做初始化工作，辅助进入用户态
+void wrap_task_to_process() {
+
+    // 先禁止中断，我怕设置不完成
+    enum intr_status old_status = intr_disable();
+    // 把之前没完成的设置完成了，申请一个页作为用户态进程栈
+    struct interrupt_stack* int_stack = (struct interrupt_stack*)((uint32_t)(running_task()) + PG_SIZE - sizeof(struct task_info_stack));
+
+    // 之前把这个操作完善了，这会在用户内存池（16MB以后申请内存空间，并且映射到用户进程自己的页表上）
+    void *user_stack = malloc_page(USER_FLAG, 1);
+    if(!user_stack) {
+        // 申请不了，回滚
+        task_cancel(running_task());
+        intr_set_status(old_status);
+        return;
+    }
+    int_stack->user_esp = (uint32_t)user_stack + PG_SIZE;
+    // 把这个设置完成了之后就可以进入用户态了
+    switch_to_user_mode();
+}
+
 struct task* process_create(char *name, uint32_t entry_function){
     // 关闭中断
     enum intr_status old_status = intr_disable();
@@ -130,7 +151,7 @@ struct task* process_create(char *name, uint32_t entry_function){
     // 创建一个任务，这个任务其实就是跳进用户态
     // 真正的入口函数在中断栈里面
     // 默认进程和内核平等，内核优先级是31
-    struct task* new_task = task_create(name, 31, switch_to_user_mode, NULL);
+    struct task* new_task = task_create(name, 31, wrap_task_to_process, NULL);
     if (new_task == NULL) {
         intr_set_status(old_status);
         return NULL;
@@ -176,7 +197,8 @@ struct task* process_create(char *name, uint32_t entry_function){
     int_stack->esp = (uint32_t)int_stack + 14 * 4;  // 以防万一，我把这个esp的值设置到CPU自动压栈的错误码位置（这个其实cpu会自动调整）
 
     int_stack->user_ss = SELECTOR_U_STACK;   // 内核态和用户态的栈段选择子用的都是数据段选择子
-    int_stack->user_esp = (uint32_t)new_task + PG_SIZE; // 与TSS保持一致
+    // 这个操作挪到进程包装函数里面了
+    //int_stack->user_esp = (uint32_t)new_task + PG_SIZE; // 与TSS保持一致
 
     // 恢复中断，等待调度
     intr_set_status(old_status);

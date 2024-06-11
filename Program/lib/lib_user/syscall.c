@@ -25,3 +25,8 @@ void *user_malloc(uint32_t cnt) {
 void user_free(void *addr, uint32_t cnt) {
     intr_syscall(4,(uint32_t)addr,cnt,0,0);
 }
+
+// 用户版本的put_int
+uint32_t print_int(uint32_t num) {
+    return intr_syscall(5,num,0,0,0);
+}

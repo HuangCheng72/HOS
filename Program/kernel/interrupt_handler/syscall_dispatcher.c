@@ -45,6 +45,12 @@ uint32_t syscall_dispatcher(uint32_t syscall_number, uint32_t arg1, uint32_t arg
 
     if(syscall_number == 4) {
         free_page((void *)arg1, arg2);
+        return 1;
+    }
+
+    if(syscall_number == 5) {
+        console_put_int(arg1);
+        return 1;
     }
 
     return 0;

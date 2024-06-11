@@ -27,5 +27,7 @@ void get_process_name(char *buf);
 void *user_malloc(uint32_t cnt);
 // 释放内存（以页为单位）
 void user_free(void *addr, uint32_t cnt);
+// 用户版本的put_int
+uint32_t print_int(uint32_t num);
 
 #endif //HOS_SYSCALL_H
