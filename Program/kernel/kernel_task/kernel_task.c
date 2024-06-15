@@ -274,3 +274,22 @@ void task_unblock(struct task *task) {
     // 操作完成重设状态（谁知道原来是不是也是关中断）
     intr_set_status(old_status);
 }
+
+// 让出CPU时间，但不阻塞
+void task_yield() {
+    // 关闭中断，防止任务切换过程中出现竞态条件
+    enum intr_status old_status = intr_disable();
+
+    // 当前任务重新加入到就绪队列的队尾
+    if (current_task->status == TASK_RUNNING) {
+        list_add_tail(&current_task->general_tag, &ready_list);
+        current_task->status = TASK_READY;
+    }
+
+    // 调度下一个任务
+    task_schedule();
+    // 执行任务切换
+    task_switch();
+    // 恢复中断状态
+    intr_set_status(old_status);
+}

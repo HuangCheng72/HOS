@@ -105,5 +105,7 @@ void init_multitasking(void);
 void task_block(enum task_status stat);
 // 将该任务状态修改为TASK_READY，并插入到调度队列最前，即解除阻塞并使其尽快进入工作状态
 void task_unblock(struct task *task);
+// 让出CPU时间，但不阻塞
+void task_yield(void);
 
 #endif //HOS_KERNEL_TASK_H
