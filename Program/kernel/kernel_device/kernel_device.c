@@ -255,14 +255,34 @@ int32_t device_read(struct driver *drv, char *data, uint32_t count) {
     if(!drv || !(drv->data_buffer)) {
         return -1;
     }
-    kernel_buffer_read(drv->data_buffer, data, count);
-    return count;
+
+    uint32_t total_read = 0;
+    uint32_t to_read = 0;
+    uint32_t chunk_size = 3072; // 限制一次性读3KB
+
+    while (total_read < count) {
+        to_read = (count - total_read > chunk_size) ? chunk_size : count - total_read;
+        kernel_buffer_read(drv->data_buffer, data + total_read, to_read);
+        total_read += to_read;
+    }
+
+    return total_read;
 }
 // 对设备（驱动）写，本质上就是写其命令缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
 int32_t device_write(struct driver *drv, char *data, uint32_t count) {
     if(!drv || !(drv->command_buffer)) {
         return -1;
     }
-    kernel_buffer_write(drv->command_buffer, data, count);
-    return count;
+
+    uint32_t total_written = 0;
+    uint32_t to_write = 0;
+    uint32_t chunk_size = 3072; // 限制一次性写3KB
+
+    while (total_written < count) {
+        to_write = (count - total_written > chunk_size) ? chunk_size : count - total_written;
+        kernel_buffer_write(drv->command_buffer, data + total_written, to_write);
+        total_written += to_write;
+    }
+
+    return total_written;
 }
