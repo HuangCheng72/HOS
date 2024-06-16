@@ -20,57 +20,57 @@ extern void (*interrupt_handler_functions[256])(void);
 void free_driver_buffer(struct driver *drv) {
 
     // 需要内核缓冲区，而且已经被分配了缓冲区的情况
-    if (drv->need_input_buffer && drv->input_buffer) {
+    if (drv->need_data_buffer && drv->data_buffer) {
         // 回收缓冲区
-        kernel_buffer_free(drv->input_buffer);
+        kernel_buffer_free(drv->data_buffer);
         // 清空指针
-        drv->input_buffer = NULL;
+        drv->data_buffer = NULL;
     }
 
     // 需要内核缓冲区，而且已经被分配了缓冲区的情况
-    if (drv->need_output_buffer && drv->output_buffer) {
+    if (drv->need_command_buffer && drv->command_buffer) {
         // 回收缓冲区
-        kernel_buffer_free(drv->output_buffer);
+        kernel_buffer_free(drv->command_buffer);
         // 清空指针
-        drv->output_buffer = NULL;
+        drv->command_buffer = NULL;
     }
 
 }
 
 // 分配缓冲区，原子操作，失败回滚，返回1为成功，0为失败
 uint8_t alloc_driver_buffer(struct driver *drv) {
-    struct kernel_buffer *input_buf = NULL;
-    struct kernel_buffer *output_buf = NULL;
+    struct kernel_buffer *data_buf = NULL;
+    struct kernel_buffer *command_buf = NULL;
 
-    // 尝试分配输入缓冲区
-    if (drv->need_input_buffer) {
-        if (drv->input_buffer) {
-            // 如果已经存在输入缓冲区，直接返回，不做任何更改
+    // 尝试分配数据缓冲区
+    if (drv->need_data_buffer) {
+        if (drv->data_buffer) {
+            // 如果已经存在数据缓冲区，直接返回，不做任何更改
             return 0;
         } else {
-            input_buf = kernel_buffer_create();
-            if (!input_buf) {
+            data_buf = kernel_buffer_create();
+            if (!data_buf) {
                 // 分配失败，直接返回，不做任何更改
                 return 0;
             }
         }
     }
 
-    // 尝试分配输出缓冲区
-    if (drv->need_output_buffer) {
-        if (drv->output_buffer) {
-            // 如果已经存在输出缓冲区，先释放已分配的输入缓冲区（如果有的话）
-            if (input_buf) {
-                kernel_buffer_free(input_buf);
+    // 尝试分配命令缓冲区
+    if (drv->need_command_buffer) {
+        if (drv->command_buffer) {
+            // 如果已经存在命令缓冲区，先释放已分配的数据缓冲区（如果有的话）
+            if (data_buf) {
+                kernel_buffer_free(data_buf);
             }
             // 直接返回，不做任何更改
             return 0;
         } else {
-            output_buf = kernel_buffer_create();
-            if (!output_buf) {
-                // 分配失败，回滚已分配的输入缓冲区（如果有的话）
-                if (input_buf) {
-                    kernel_buffer_free(input_buf);
+            command_buf = kernel_buffer_create();
+            if (!command_buf) {
+                // 分配失败，回滚已分配的数据缓冲区（如果有的话）
+                if (data_buf) {
+                    kernel_buffer_free(data_buf);
                 }
                 // 直接返回，不做任何更改
                 return 0;
@@ -80,11 +80,11 @@ uint8_t alloc_driver_buffer(struct driver *drv) {
 
     // 如果成功分配了缓冲区，更新驱动的缓冲区指针
     // 这里的指针如果不为空，肯定说明要求分配了，所以直接更新即可，不用再次判定是否要求分配了
-    if (input_buf) {
-        drv->input_buffer = input_buf;
+    if (data_buf) {
+        drv->data_buffer = data_buf;
     }
-    if (output_buf) {
-        drv->output_buffer = output_buf;
+    if (command_buf) {
+        drv->command_buffer = command_buf;
     }
 
     return 1;
@@ -250,19 +250,19 @@ struct driver* get_driver(const char *driver_name) {
     // 找不到那就只能null了
     return NULL;
 }
-// 对设备（驱动）读，本质上就是读其输入缓冲区（成功返回读出数量（以字节计算），不成功返回-1）
+// 对设备（驱动）读，本质上就是读其数据缓冲区（成功返回读出数量（以字节计算），不成功返回-1）
 int32_t device_read(struct driver *drv, char *data, uint32_t count) {
-    if(!drv || !(drv->input_buffer)) {
+    if(!drv || !(drv->data_buffer)) {
         return -1;
     }
-    kernel_buffer_read(drv->input_buffer, data, count);
+    kernel_buffer_read(drv->data_buffer, data, count);
     return count;
 }
-// 对设备（驱动）写，本质上就是写其输出缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
+// 对设备（驱动）写，本质上就是写其命令缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
 int32_t device_write(struct driver *drv, char *data, uint32_t count) {
-    if(!drv || !(drv->output_buffer)) {
+    if(!drv || !(drv->command_buffer)) {
         return -1;
     }
-    kernel_buffer_write(drv->output_buffer, data, count);
+    kernel_buffer_write(drv->command_buffer, data, count);
     return count;
 }

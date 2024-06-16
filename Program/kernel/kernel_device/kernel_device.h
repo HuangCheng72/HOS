@@ -18,17 +18,17 @@ struct driver {
 
     // 因为注册宏里面改了四字节对齐，这里用uint_8_t也是四字节，干脆用uint_32_t填满
 
-    uint32_t need_input_buffer;                 // 需要分配输入缓冲区就填1，不然填0
-    uint32_t need_output_buffer;                // 需要分配输出缓冲区就填1，不然填0
+    uint32_t need_data_buffer;                  // 需要分配数据缓冲区就填1，不然填0
+    uint32_t need_command_buffer;               // 需要分配命令缓冲区就填1，不然填0
 
-    struct kernel_buffer *input_buffer;         // 指向输入缓冲区的指针
-    struct kernel_buffer *output_buffer;        // 指向输出缓冲区的指针
+    struct kernel_buffer *data_buffer;          // 指向数据缓冲区的指针
+    struct kernel_buffer *command_buffer;       // 指向命令缓冲区的指针
 
     struct list_node node;                      // 用于串联到驱动链表上的链表结点
 
     void *driver_task_function;                 // 用于创建内核任务的函数入口
-                                                // 这个内核任务负责具体的对设备读写，与缓冲区进行交互
-                                                // 依赖于设备驱动的实现，没有也无所谓
+    // 这个内核任务负责具体的对设备读写，与缓冲区进行交互
+    // 依赖于设备驱动的实现，没有也无所谓
 
     void *driver_task_function_args;            // 理论上应该不用传参，实际上不知道，多冗余一些好
 };
@@ -43,9 +43,9 @@ void driver_add(struct driver* drv);
 void driver_remove(const char *driver_name);
 // 获取设备驱动
 struct driver* get_driver(const char *driver_name);
-// 对设备（驱动）读，本质上就是读其输入缓冲区（成功返回读出数量（以字节计算），不成功返回-1）
+// 对设备（驱动）读，本质上就是读其数据缓冲区（成功返回读出数量（以字节计算），不成功返回-1）
 int32_t device_read(struct driver *drv, char *data, uint32_t count);
-// 对设备（驱动）写，本质上就是写其输出缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
+// 对设备（驱动）写，本质上就是写其命令缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
 int32_t device_write(struct driver *drv, char *data, uint32_t count);
 
 // 这个注册宏的作用就是把数据放在驱动段（而且告诉编译器这个是被使用的，不能优化掉），它会定义一个驱动结构体实例（增加4字节对齐）

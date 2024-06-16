@@ -245,12 +245,13 @@ REGISTER_DRIVER(keyboard_driver){
         .exit = NULL,
         .irq = 1,
         .irq_interrupt_handler = interrupt_keyboard_handler,
-        .need_input_buffer = 1,    // 需要输入缓冲区
+        .need_data_buffer = 1,    // 需要输入缓冲区
+        .data_buffer = NULL,
 };
 
 /* 键盘初始化 */
 void keyboard_init() {
-    keyboard_buffer = keyboard_driver.input_buffer;
+    keyboard_buffer = keyboard_driver.data_buffer;
     // 如果分配不到缓冲区，初始化失败
     if(!keyboard_buffer) {
         put_str("\nkeyboard_init_fail!\n");
