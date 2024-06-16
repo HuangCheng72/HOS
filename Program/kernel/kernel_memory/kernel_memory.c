@@ -72,7 +72,8 @@ typedef union {
 void init_memory(uint32_t total_physical_memory) {
     // 物理地址位图，一页是一位，一字节8位
     global_bitmap_physical_memory->bits = (uint8_t *)GLOBAL_BITMAP_PHYSICAL_BASE;
-    global_bitmap_physical_memory->btmp_bytes_len = total_physical_memory / PG_SIZE / 8;
+    // 这里做个临时修改，把最后的16MB留出给ramdisk，其他的就是给内存管理自由发挥
+    global_bitmap_physical_memory->btmp_bytes_len = (total_physical_memory - 0x01000000) / PG_SIZE / 8;
     bitmap_init(global_bitmap_physical_memory);
     // 物理地址上已经占据了的置为1
     // 低端1MB全部被内核占据了，还有页表和页目录表、位图

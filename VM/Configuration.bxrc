@@ -8,8 +8,8 @@ config_interface: win32config
 display_library: win32
 # 显示库：使用Windows显示库
 
-memory: host=32, guest=32
-# 内存：主机和客户机均分配32MB内存
+memory: host=64, guest=64
+# 内存：主机和客户机均分配64MB内存
 
 romimage: file="C:/bochs/Bochs-2.6.11/BIOS-bochs-latest", address=0x00000000, options=none
 # ROM映像：BIOS映像文件路径，加载地址为0x00000000，无选项
@@ -32,7 +32,7 @@ floppy_bootsig_check: disabled=0
 ata0: enabled=true, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 # ATA控制器0：启用，IO地址1=0x1f0，IO地址2=0x3f0，中断请求14
 
-ata0-master: type=disk, path="C:/Users/huang/Desktop/Repository/HOS/VM/HOS.raw", mode=flat, cylinders=130, heads=16, spt=63, sect_size=512, model="Generic 1234", biosdetect=auto, translation=auto
+ata0-master: type=disk, path="C:/Users/Administrator/Desktop/Repository/HOS/VM/HOS.raw", mode=flat, cylinders=130, heads=16, spt=63, sect_size=512, model="Generic 1234", biosdetect=auto, translation=auto
 # ATA控制器0主设备：类型为磁盘，路径为HOS.raw，扁平模式，130个柱面，16个磁头，每柱面63个扇区，扇区大小512字节，型号为"Generic 1234"，BIOS检测为自动，转换方式为自动
 
 ata0-slave: type=none
@@ -98,8 +98,8 @@ clock: sync=none, time0=local, rtc_sync=0
 # no cmosimage
 # 无CMOS映像
 
-log: C:/Users/huang/Desktop/Repository/HOS/VM/bochsout.txt
-# 日志文件路径：C:\Users\huang\Desktop\Repository\HOS\VM\bochsout.txt
+log: C:/Users/Administrator/Desktop/Repository/HOS/VM/bochsout.txt
+# 日志文件路径：C:\Users\Administrator\Desktop\Repository\HOS\VM\bochsout.txt
 
 logprefix: %t%e%d
 # 日志前缀：时间、事件、日期
