@@ -31,11 +31,6 @@ struct ramdisk_io_request {
     char data[SECTOR_SIZE];
 };
 
-void ramdisk_init(void) {
-    //memset(ramdisk, 0, RAMDISK_SIZE);
-    //console_put_str("\ninit ramdisk\n");
-}
-
 int32_t ramdisk_read(int sector, void *buffer, uint32_t size) {
     if (sector * SECTOR_SIZE + size > RAMDISK_SIZE) {
         return -1; // 超出范围
@@ -51,11 +46,6 @@ int32_t ramdisk_write(int sector, const void *buffer, uint32_t size) {
     memcpy(ramdisk + sector * SECTOR_SIZE, buffer, size);
     return size;
 }
-
-
-// 死锁问题根源在于一个线程需要两个资源运行
-// 谁先解锁不知道
-// 如果write锁住了，readable可用了，但是write还锁着，就不行了。根本唤醒不了，无法工作。
 
 void ramdisk_task_function() {
     uint32_t sector, size, command;
@@ -111,91 +101,13 @@ void ramdisk_task_function() {
 
             default:
                 // 处理未知命令
-                console_put_str("Unknown command received!\n");
+                console_put_str("\nread_pos : ");
+                console_put_int(ramdisk_driver.command_buffer->read_pos);
+                console_put_str("\n");
+                console_put_int(command);
+                console_put_str("        Unknown command received!\n");
+
                 break;
         }
     }
 }
-
-/*
-void ramdisk_task_function() {
-    uint32_t sector, size, command;
-    uint32_t bytes_processed;
-    char buffer[1024];
-
-    for(;;) {
-        // 处理命令缓冲区中的命令
-        if (!kernel_buffer_is_empty(ramdisk_driver.command_buffer)) {
-            // 清空
-            sector = 0;
-            size = 0;
-            command = 0;
-
-            // 读取扇区、大小和命令标志
-            kernel_buffer_read(ramdisk_driver.command_buffer, (char *)&sector, sizeof(uint32_t));
-            kernel_buffer_read(ramdisk_driver.command_buffer, (char *)&size, sizeof(uint32_t));
-            kernel_buffer_read(ramdisk_driver.command_buffer, (char *)&command, sizeof(uint32_t));
-
-            // 根据命令执行相应操作
-            switch (command) {
-                case WRITE_CMD:
-                    // 处理写请求
-//                    console_put_str("\nramdisk_write_op_start\n");
-
-                    // 写入数据
-                    bytes_processed = 0;
-                    while (bytes_processed < size) {
-                        uint32_t chunk_size = (size - bytes_processed > 1024) ? 1024 : (size - bytes_processed);
-                        kernel_buffer_read(ramdisk_driver.command_buffer, buffer, chunk_size);
-                        // 特意检查一下。
-                        console_put_str("\ncommand_buffer : ");
-                        console_put_int((uint32_t)ramdisk_driver.command_buffer->data);
-                        console_put_str("\nbuffer 0xc7 : ");
-                        console_put_int(buffer[0xc7]);
-                        console_put_char('\n');
-
-                        ramdisk_write(sector + (bytes_processed / SECTOR_SIZE), buffer, chunk_size);
-                        bytes_processed += chunk_size;
-                    }
-//                    console_put_str("\nramdisk_write_op_end\n");
-                    break;
-
-                case READ_CMD:
-                    // 处理读请求
-//                    console_put_str("\nramdisk_read_op_start\n");
-
-                    bytes_processed = 0;
-                    while (bytes_processed < size) {
-                        uint32_t chunk_size = (size - bytes_processed > 1024) ? 1024 : (size - bytes_processed);
-                        ramdisk_read(sector + (bytes_processed / SECTOR_SIZE), buffer, chunk_size);
-                        kernel_buffer_write(ramdisk_driver.data_buffer, buffer, chunk_size);
-                        bytes_processed += chunk_size;
-                    }
-//                    console_put_str("\nramdisk_read_op_end\n");
-                    break;
-
-                case DELETE_CMD:
-                    // 处理删除请求
-//                    console_put_str("\nramdisk_delete_op_start\n");
-                    memset(ramdisk + sector * SECTOR_SIZE, 0, size);
-//                    console_put_str("\nramdisk_delete_op_end\n");
-                    break;
-
-                default:
-                    // 处理未知命令
-                    put_str("Unknown command received!\n");
-                    break;
-            }
-        } else {
-            // 验证中断状态
-//            if(intr_get_status() == INTR_OFF) {
-//                console_put_str("\nbefore yield : INTR_OFF\n");
-//            } else {
-//                console_put_str("\nbefore yield : INTR_ON\n");
-//            }
-            // 让出CPU时间
-            task_yield();
-        }
-    }
-}
-*/

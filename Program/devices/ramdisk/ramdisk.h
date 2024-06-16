@@ -17,7 +17,6 @@
 #define WRITE_CMD 0x57524954 // ASCII "WRIT"
 #define DELETE_CMD 0x44454C45 // ASCII "DELE"
 
-void ramdisk_init(void);
 int32_t ramdisk_read(int sector, void *buffer, uint32_t size);
 int32_t ramdisk_write(int sector, const void *buffer, uint32_t size);
 void ramdisk_task_function();

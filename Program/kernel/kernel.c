@@ -8,11 +8,10 @@
 #include "../devices/console/console.h"
 #include "kernel_buffer/kernel_buffer.h"
 #include "../user/process/process.h"
+#include "../devices/ramdisk/ramdisk.h"
 
 #include "../lib/lib_user/syscall.h"
 
-// 测试进程
-void test_user_process(void);
 
 void kernel_main(void) {
 
@@ -32,8 +31,6 @@ void kernel_main(void) {
     // 初始化所有设备
     init_all_devices();
 
-    process_create("test_user_process", (uint32_t)test_user_process);
-
     // 允许PIC_IRQ0中断，才可以让定时器调度线程
     enable_pic_irq_interrupt(0);
     // 开启全局中断
@@ -41,23 +38,7 @@ void kernel_main(void) {
 
     // 进入内核主循环或其它初始化代码
     for(;;) {
-
     }
     // 退出主循环卸载设备驱动
     exit_all_devices();
-}
-
-// 测试作为用户进程开启的函数
-void test_user_process(void) {
-    // 用户进程无权访问内核空间
-    // 需要内核拷贝到用户空间，因为内核特权级高
-    char name[64] = { 0 };
-
-    get_process_name(name);
-    write("\nI'm ");
-    write(name);
-    write("\n");
-
-    for(;;) {
-    }
 }
