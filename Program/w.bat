@@ -30,7 +30,7 @@ dd if=/dev/zero of=%HD_IMG% bs=1M count=64 conv=notrunc
 rem 使用dd将mbr.bin写入硬盘映像文件
 dd if=%MBR_BIN% of=%HD_IMG% bs=512 count=1 conv=notrunc
 dd if=%LOADER_BIN% of=%HD_IMG% bs=512 count=1 seek=2 conv=notrunc
-dd if=%KERNEL_BIN% of=%HD_IMG% bs=512 count=200 seek=9 conv=notrunc
+dd if=%KERNEL_BIN% of=%HD_IMG% bs=512 count=200 seek=8 conv=notrunc
 
 rem 执行clean操作
 make clean

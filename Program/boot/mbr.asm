@@ -3,101 +3,63 @@
 SECTION MBR vstart=0x7c00
 ; 入口地址0x7c00是MBR的惯例，BIOS只要发现MBR，一律加载到这个地址
 ; 在开始就设置每个寄存器的初始值
-   mov ax,cs
-   mov ds,ax
-   mov es,ax
-   mov ss,ax
-   mov fs,ax
+    mov ax,cs
+    mov ds,ax
+    mov es,ax
+    mov ss,ax
+    mov fs,ax
 ; cs一开始是0，设置ds、es、ss、fs四个都是0
-   mov sp,0x7c00
+    mov sp,0x7c00
 ; sp存储的是栈顶指针，在MBR一开始必须是0x7c00（这本身也是MBR的加载位置，栈是向低地址处生长的，所以不会覆盖MBR的数据）
-   mov ax,0xb800
+    mov ax,0xb800
 ; 0xb800，VGA时代对应显存的起始位置，放到gs寄存器里面
-   mov gs,ax
+    mov gs,ax
 
 ; 清屏
-   mov     ax, 0600h
-   mov     bx, 0700h
-   mov     cx, 0
-   mov     dx, 184fh
-   int     10h
+    mov     ax, 0600h
+    mov     bx, 0700h
+    mov     cx, 0
+    mov     dx, 184fh
+    int     10h
 
-; 读入Loader
-   mov eax,LOADER_START_SECTOR	 ; 起始扇区lba地址
-   mov bx,LOADER_BASE_ADDR       ; 写入的地址
-   mov cx,4			 ; 待读入的扇区数
-   call rd_disk_m_16		 ; 以下读取程序的起始部分（一个扇区）
+; 读入Loader和内核
 
-   jmp LOADER_BASE_ADDR
+    ; 设置磁盘地址包
+    mov byte [disk_address_packet], 16              ; 包大小
+    mov byte [disk_address_packet + 1], 0           ; 保留字段
+    mov word [disk_address_packet + 2], 120         ; 要读取的扇区数
+    mov word [disk_address_packet + 4], 0           ; 缓冲区偏移量（数值是整数，自然可以写死为0）
+    ; 计算目标地址段
+    mov ax, LOADER_BASE_ADDR
+    shr ax, 4
+    mov word [disk_address_packet + 6], ax          ; 缓冲区段
+    xor ax, ax
+    mov word [disk_address_packet + 8], LOADER_START_SECTOR      ; 起始LBA地址（低32位）主要是因为LOADER_START_SECTOR小，所以可以直接写到低位，不然就要拆分了
+    mov word [disk_address_packet + 12], 0                       ; 起始LBA地址（高32位）
 
-;-------------------------------------------------------------------------------
-;功能:读取硬盘n个扇区，16位
-rd_disk_m_16:
-;-------------------------------------------------------------------------------
-    ; 参数说明：
-    ; ax = LBA扇区号
-    ; bx = 将数据写入的内存地址
-    ; cx = 读入的扇区数
+    ; 设置BIOS中断0x13的参数
+    mov ah, 0x42                       ; 扩展读取功能
+    mov dl, 0x80                       ; 驱动器号，第一个硬盘
+    lea si, [disk_address_packet]      ; 磁盘地址包指针
+    int 0x13                           ; 调用BIOS中断
+    jc error                           ; 如果出错，跳转到错误处理
 
-    mov si, ax              ; 备份ax，保存LBA扇区号
-    mov di, cx              ; 备份cx，保存要读取的扇区数
+    jmp LOADER_BASE_ADDR               ; 进入Loader进行后续设置
 
-    ; 第1步：设置要读取的扇区数
-    mov dx, SECTOR_COUNT_REG ; 选择扇区计数寄存器端口
-    mov al, cl              ; 将要读取的扇区数放入al
-    out dx, al              ; 输出到扇区计数寄存器
+error:
+    jmp $                       ; 错误处理，死循环
 
-    mov ax, si              ; 恢复ax，包含LBA扇区号
 
-    ; 第2步：将LBA地址存入0x1f3 ~ 0x1f6
 
-    ; LBA地址7~0位写入端口SECTOR_NUM_REG
-    mov dx, SECTOR_NUM_REG
-    out dx, al
-
-    ; LBA地址15~8位写入端口CYL_LOW_REG
-    mov cl, 8
-    shr ax, cl
-    mov dx, CYL_LOW_REG
-    out dx, al
-
-    ; LBA地址23~16位写入端口CYL_HIGH_REG
-    shr ax, cl
-    mov dx, CYL_HIGH_REG
-    out dx, al
-
-    ; LBA地址27~24位写入端口DRIVE_HEAD_REG
-    shr ax, cl
-    and al, 0x0f       ; 只保留LBA地址的低4位
-    or al, 0xe0        ; 设置7~4位为1110，表示LBA模式
-    mov dx, DRIVE_HEAD_REG
-    out dx, al
-
-    ; 第3步：向STATUS_CMD_REG端口写入读命令，0x20
-    mov dx, STATUS_CMD_REG
-    mov al, 0x20
-    out dx, al
-
-    ; 第4步：检测硬盘状态
-    .not_ready:
-        nop
-        in al, dx
-        and al, 0x88       ; 检查硬盘控制器状态：第4位为1表示准备好数据传输，第7位为1表示硬盘忙
-        cmp al, 0x08
-        jnz .not_ready     ; 若未准备好，继续等待
-
-    ; 第5步：从DATA_REG端口读数据
-    mov ax, di
-    mov dx, 256
-    mul dx
-    mov cx, ax         ; di为要读取的扇区数，一个扇区有512字节，每次读入一个字，共需di*512/2次
-    mov dx, DATA_REG
-    .go_on_read:
-        in ax, dx
-        mov [bx], ax
-        add bx, 2
-        loop .go_on_read
-        ret
+; 地址包，所谓DAP，这是BIOS 0x13号中断的0x42功能所需的参数列表
+disk_address_packet:
+    db 16                          ; 包大小
+    db 0                           ; 保留字段
+    dw 0                           ; 要读取的扇区数
+    dw 0                           ; 缓冲区偏移量（这两个值和0x02功能里面的bx、es同义）
+    dw 0                           ; 缓冲区段
+    dd 0                           ; 起始LBA地址（低32位）
+    dd 0                           ; 起始LBA地址（高32位）
 
 times 510-($-$$) db 0
 ; 这行代码的作用是填充当前代码段，使其总长度达到510字节。

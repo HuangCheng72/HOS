@@ -64,34 +64,7 @@ gdt_ptr:
 total_mem_bytes dd 0
 
 loader_start:
-    ; 在进入保护模式之前先读内核
-
-    ; 设置磁盘地址包
-    mov byte [disk_address_packet], 16              ; 包大小
-    mov byte [disk_address_packet + 1], 0           ; 保留字段
-    mov word [disk_address_packet + 2], 50          ; 要读取的扇区数
-    mov word [disk_address_packet + 4], 0           ; 缓冲区偏移量（数值是整数，自然可以写死为0）
-    ; 计算目标地址段
-    mov ax, KERNEL_BASE_ADDR
-    shr ax, 4
-    mov word [disk_address_packet + 6], ax          ; 缓冲区段
-    xor ax, ax
-    mov word [disk_address_packet + 8], KERNEL_START_SECTOR      ; 起始LBA地址（低32位）主要是因为KERNEL_START_SECTOR小，所以可以直接写到低位，不然就要拆分了
-    mov word [disk_address_packet + 12], 0                       ; 起始LBA地址（高32位）
-
-    ; 设置BIOS中断0x13的参数
-    mov ah, 0x42                       ; 扩展读取功能
-    mov dl, 0x80                       ; 驱动器号，第一个硬盘
-    lea si, [disk_address_packet]      ; 磁盘地址包指针
-    int 0x13                           ; 调用BIOS中断
-    jc error                           ; 如果出错，跳转到错误处理
-
-    jmp enable_p_mode           ; 进行后续设置
-
-error:
-    jmp $                       ; 错误处理，死循环
-
-
+; MBR已经读完了
 enable_p_mode:
     ; 不屏蔽中断，进不去QEMU，会无限重启，本来要屏蔽中断就是一个必备流程，bochs里面能用不代表qemu或者真机能用
     cli
@@ -191,13 +164,3 @@ get_memory:
     pop edi                      ; 恢复 edi 寄存器的值
     stc                          ; 设置错误标志，表示内存测试失败
     ret                          ; 返回调用者
-
-; 地址包，所谓DAP，这是BIOS 0x13号中断的0x42功能所需的参数列表
-disk_address_packet:
-    db 16                          ; 包大小
-    db 0                           ; 保留字段
-    dw 0                           ; 要读取的扇区数
-    dw 0                           ; 缓冲区偏移量（这两个值和0x02功能里面的bx、es同义）
-    dw 0                           ; 缓冲区段
-    dd 0                           ; 起始LBA地址（低32位）
-    dd 0                           ; 起始LBA地址（高32位）
