@@ -13,6 +13,13 @@ struct driver {
     char driver_name[64];                       // 驱动名称
     void (*init)(void);                         // 初始化函数
     void (*exit)(void);                         // 退出函数
+
+    // 驱动提供的读写函数（如果没有就读写缓冲区）
+
+    int32_t (*read)(char *args, uint32_t args_size);    // 读设备函数（具体参数写在args里面）
+    int32_t (*write)(char *args, uint32_t args_size);   // 写设备函数（具体参数写在args里面）
+
+
     int32_t irq;                                // IRQ 中断号（如果没有中断处理函数填-1）
     void (*irq_interrupt_handler)(void);        // 中断处理函数（可选）
 
@@ -43,9 +50,9 @@ void driver_add(struct driver* drv);
 void driver_remove(const char *driver_name);
 // 获取设备驱动
 struct driver* get_driver(const char *driver_name);
-// 对设备（驱动）读，本质上就是读其数据缓冲区（成功返回读出数量（以字节计算），不成功返回-1）
+// 对设备（驱动）读，如果设备驱动提供了read就转发（返回结果设备驱动read的结果），不然读其数据缓冲区（成功返回读出数量（以字节计算），不成功返回-1）
 int32_t device_read(struct driver *drv, char *data, uint32_t count);
-// 对设备（驱动）写，本质上就是写其命令缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
+// 对设备（驱动）写，如果设备驱动提供了write就转发（返回结果设备驱动write的结果），不然写其命令缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
 int32_t device_write(struct driver *drv, char *data, uint32_t count);
 
 // 这个注册宏的作用就是把数据放在驱动段（而且告诉编译器这个是被使用的，不能优化掉），它会定义一个驱动结构体实例（增加4字节对齐）

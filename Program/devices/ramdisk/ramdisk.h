@@ -12,13 +12,8 @@
 // 一个扇区的大小
 #define SECTOR_SIZE 512
 
-// 读取和写入操作标志
-#define READ_CMD 0x52454144 // ASCII "READ"
-#define WRITE_CMD 0x57524954 // ASCII "WRIT"
-#define DELETE_CMD 0x44454C45 // ASCII "DELE"
 
-int32_t ramdisk_read(int sector, void *buffer, uint32_t size);
-int32_t ramdisk_write(int sector, const void *buffer, uint32_t size);
-void ramdisk_task_function();
+int32_t ramdisk_read(char *args, uint32_t args_size);
+int32_t ramdisk_write(char *args, uint32_t args_size);
 
 #endif //HOS_RAMDISK_H

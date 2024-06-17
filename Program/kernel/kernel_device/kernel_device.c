@@ -250,39 +250,70 @@ struct driver* get_driver(const char *driver_name) {
     // 找不到那就只能null了
     return NULL;
 }
-// 对设备（驱动）读，本质上就是读其数据缓冲区（成功返回读出数量（以字节计算），不成功返回-1）
+// 对设备（驱动）读，如果设备驱动提供了read就转发（返回结果设备驱动read的结果），不然读其数据缓冲区（成功返回读出数量（以字节计算），不成功返回-1）
 int32_t device_read(struct driver *drv, char *data, uint32_t count) {
-    if(!drv || !(drv->data_buffer)) {
+    if(!drv) {
+        return -1;
+    }
+    // 什么都不提供，自然要失败
+    if(drv->read == NULL && drv->data_buffer == NULL) {
         return -1;
     }
 
-    uint32_t total_read = 0;
-    uint32_t to_read = 0;
-    uint32_t chunk_size = 3072; // 限制一次性读3KB
-
-    while (total_read < count) {
-        to_read = (count - total_read > chunk_size) ? chunk_size : count - total_read;
-        kernel_buffer_read(drv->data_buffer, data + total_read, to_read);
-        total_read += to_read;
+    // 驱动提供的函数优先级更高
+    if(drv->read) {
+        // 直接转发，拆包参数由驱动自行解决
+        return drv->read(data, count);
     }
 
-    return total_read;
+    // 没提供函数的情况下，直接读缓冲区了
+    if(drv->data_buffer) {
+        uint32_t total_read = 0;
+        uint32_t to_read = 0;
+        uint32_t chunk_size = 3072; // 限制一次性读3KB
+
+        while (total_read < count) {
+            to_read = (count - total_read > chunk_size) ? chunk_size : count - total_read;
+            kernel_buffer_read(drv->data_buffer, data + total_read, to_read);
+            total_read += to_read;
+        }
+
+        return total_read;
+    }
+    // 理论上应该不可能跳到这里，还是预防万一
+    return -1;
 }
-// 对设备（驱动）写，本质上就是写其命令缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
+// 对设备（驱动）写，如果设备驱动提供了write就转发（返回结果设备驱动write的结果），不然写其命令缓冲区（成功返回写入数量（以字节计算），不成功返回-1）
 int32_t device_write(struct driver *drv, char *data, uint32_t count) {
-    if(!drv || !(drv->command_buffer)) {
+    if(!drv) {
         return -1;
     }
 
-    uint32_t total_written = 0;
-    uint32_t to_write = 0;
-    uint32_t chunk_size = 3072; // 限制一次性写3KB
-
-    while (total_written < count) {
-        to_write = (count - total_written > chunk_size) ? chunk_size : count - total_written;
-        kernel_buffer_write(drv->command_buffer, data + total_written, to_write);
-        total_written += to_write;
+    // 什么都不提供，自然要失败
+    if(drv->write == NULL && drv->command_buffer == NULL) {
+        return -1;
     }
 
-    return total_written;
+    // 驱动提供的函数优先级更高
+    if(drv->write) {
+        // 直接转发，拆包参数由驱动自行解决
+        return drv->write(data, count);
+    }
+
+    // 没提供函数的情况下，直接读缓冲区了
+    if(drv->command_buffer) {
+        uint32_t total_written = 0;
+        uint32_t to_write = 0;
+        uint32_t chunk_size = 3072; // 限制一次性写3KB
+
+        while (total_written < count) {
+            to_write = (count - total_written > chunk_size) ? chunk_size : count - total_written;
+            kernel_buffer_write(drv->command_buffer, data + total_written, to_write);
+            total_written += to_write;
+        }
+
+        return total_written;
+    }
+    // 理论上应该不可能跳到这里，还是预防万一
+    return -1;
 }
