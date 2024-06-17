@@ -27,12 +27,6 @@ SECTION MBR vstart=0x7c00
    mov bx,LOADER_BASE_ADDR       ; 写入的地址
    mov cx,4			 ; 待读入的扇区数
    call rd_disk_m_16		 ; 以下读取程序的起始部分（一个扇区）
-   
-; 读入Kernel，200个扇区足够大了
-   mov eax,KERNEL_START_SECTOR	 ; 起始扇区lba地址
-   mov bx,KERNEL_BASE_ADDR       ; 写入的地址
-   mov cx,50			 ; 待读入的扇区数
-   call rd_disk_m_16		 ; 以下读取程序的起始部分（一个扇区）
 
    jmp LOADER_BASE_ADDR
 
@@ -41,19 +35,19 @@ SECTION MBR vstart=0x7c00
 rd_disk_m_16:
 ;-------------------------------------------------------------------------------
     ; 参数说明：
-    ; eax = LBA扇区号
-    ; ebx = 将数据写入的内存地址
-    ; ecx = 读入的扇区数
+    ; ax = LBA扇区号
+    ; bx = 将数据写入的内存地址
+    ; cx = 读入的扇区数
 
-    mov esi, eax          ; 备份eax，保存LBA扇区号
-    mov di, cx            ; 备份cx，保存要读取的扇区数
+    mov si, ax              ; 备份ax，保存LBA扇区号
+    mov di, cx              ; 备份cx，保存要读取的扇区数
 
     ; 第1步：设置要读取的扇区数
     mov dx, SECTOR_COUNT_REG ; 选择扇区计数寄存器端口
-    mov al, cl            ; 将要读取的扇区数放入al
-    out dx, al            ; 输出到扇区计数寄存器
+    mov al, cl              ; 将要读取的扇区数放入al
+    out dx, al              ; 输出到扇区计数寄存器
 
-    mov eax, esi          ; 恢复eax，包含LBA扇区号
+    mov ax, si              ; 恢复ax，包含LBA扇区号
 
     ; 第2步：将LBA地址存入0x1f3 ~ 0x1f6
 
@@ -63,17 +57,17 @@ rd_disk_m_16:
 
     ; LBA地址15~8位写入端口CYL_LOW_REG
     mov cl, 8
-    shr eax, cl
+    shr ax, cl
     mov dx, CYL_LOW_REG
     out dx, al
 
     ; LBA地址23~16位写入端口CYL_HIGH_REG
-    shr eax, cl
+    shr ax, cl
     mov dx, CYL_HIGH_REG
     out dx, al
 
     ; LBA地址27~24位写入端口DRIVE_HEAD_REG
-    shr eax, cl
+    shr ax, cl
     and al, 0x0f       ; 只保留LBA地址的低4位
     or al, 0xe0        ; 设置7~4位为1110，表示LBA模式
     mov dx, DRIVE_HEAD_REG
