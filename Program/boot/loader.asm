@@ -65,74 +65,26 @@ total_mem_bytes dd 0
 
 loader_start:
     ; 在进入保护模式之前先读内核
-    ; 读入Kernel，120个扇区足够大了
 
-
-    ; BIOS 0x13中断0x02功能的参数列表
-
-    ; AH: 设置为0x02，表示读取扇区功能。
-    ; AL: 要读取的扇区数（必须在1到128之间）。
-    ; CH: 柱面号（0-1023，标准CHS模式）。
-    ; CL: 扇区号（1-63）| ((柱面号 >> 2) & 0xC0)。
-    ; DH: 磁头号（0-255）。
-    ; DL: 驱动器号（通常第一个硬盘为0x80）。
-    ; ES:BX: 数据缓冲区的段:偏移指针，用于存储读取的数据。
-
-    ; 16位下寻址方式是段 * 16 + 偏移量。所以是 es * 16 + bx。
-    ; 起始地址 0x1500（主要看KERNEL_BASE_ADDR） ，其段就是0x150，偏移量就是00
-
-    ; 初始化目标地址段
+    ; 设置磁盘地址包
+    mov byte [disk_address_packet], 16              ; 包大小
+    mov byte [disk_address_packet + 1], 0           ; 保留字段
+    mov word [disk_address_packet + 2], 50          ; 要读取的扇区数
+    mov word [disk_address_packet + 4], 0           ; 缓冲区偏移量（数值是整数，自然可以写死为0）
+    ; 计算目标地址段
     mov ax, KERNEL_BASE_ADDR
     shr ax, 4
-    mov es, ax
+    mov word [disk_address_packet + 6], ax          ; 缓冲区段
     xor ax, ax
-
-    mov ax, KERNEL_START_SECTOR ; 读取起始扇区号 (LBA)
-
-    ; 计算LBA扇区号到CHS各项参数
-    ; 计算步骤:
-    ; 1. 扇区号 (Sector)   = (LBA 扇区号 % 每磁头扇区数) + 1
-    ; 2. 磁头号 (Head)     = (LBA 扇区号 / 每磁头扇区数) % 磁头数每柱面
-    ; 3. 柱面号 (Cylinder) = (LBA 扇区号 / 每磁头扇区数) / 磁头数每柱面
-
-    ; 建立硬盘文件的参数，共计130个柱面，每个柱面16个磁头，每个磁头63个扇区
-    ; 每个柱面总计63 * 16 = 1008 个扇区
-
-    ; 现在是16位实模式，用16位除法，也就是dx:ax 组合成一个32位的被除数，除法运算之后，商在 ax，余数在 dx。
-
-    ; 清空bx，用来存放计算结果
-    xor bx, bx
-
-    ; 计算扇区号、磁头号（用低位就行了，因为真没那么多）
-    xor dx, dx                  ; 清除高16位为0
-    mov di, 63                  ; 每磁头有63个扇区
-    div di                      ; 商: ax (磁头号), 余数: dx (扇区号)
-    mov bl, dl                  ; 扇区号 (0-62)
-    add bl, 1                   ; 扇区号从1开始
-    mov bh, al                  ; 磁头号 (0-15)
-
-    ; 本来还要计算柱面号，但是也每那么多，直接写死算了，柱面号肯定是0，根本没那么多扇区
-    ; 所以cx组合起来，只需要解决扇区号的问题就行了
-    xor dx, dx                  ; 清除数据
-    mov dh, bh                  ; 转移磁头号信息
-    ; 前面也说了柱面号的问题，柱面号肯定是0，所以清空ch
-    xor ch, ch
-    ; cl的问题只要保证高2位是0就行了
-    and bl, 0x3f                ; 清除 bl 的高 2 位，保留原 bl 的低 6 位 (扇区号)
-    or cl, bl                   ; 位运算直接赋值
-
-    xor ax, ax
+    mov word [disk_address_packet + 8], KERNEL_START_SECTOR      ; 起始LBA地址（低32位）主要是因为KERNEL_START_SECTOR小，所以可以直接写到低位，不然就要拆分了
+    mov word [disk_address_packet + 12], 0                       ; 起始LBA地址（高32位）
 
     ; 设置BIOS中断0x13的参数
-    mov al, 50                  ; 读取50个扇区
-    mov ah, 0x02                ; 读扇区命令
-    mov dl, 0x80                ; 驱动器号，第一个硬盘
-
-    ; 设置开始的时候是16进制下的整数，偏移量就永远是0
-    xor bx, bx
-    int 0x13                    ; 调用BIOS中断
-    ; 检查是否成功
-    jc error                    ; 如果出错，跳转到错误处理
+    mov ah, 0x42                       ; 扩展读取功能
+    mov dl, 0x80                       ; 驱动器号，第一个硬盘
+    lea si, [disk_address_packet]      ; 磁盘地址包指针
+    int 0x13                           ; 调用BIOS中断
+    jc error                           ; 如果出错，跳转到错误处理
 
     jmp enable_p_mode           ; 进行后续设置
 
@@ -239,3 +191,13 @@ get_memory:
     pop edi                      ; 恢复 edi 寄存器的值
     stc                          ; 设置错误标志，表示内存测试失败
     ret                          ; 返回调用者
+
+; 地址包，所谓DAP，这是BIOS 0x13号中断的0x42功能所需的参数列表
+disk_address_packet:
+    db 16                          ; 包大小
+    db 0                           ; 保留字段
+    dw 0                           ; 要读取的扇区数
+    dw 0                           ; 缓冲区偏移量（这两个值和0x02功能里面的bx、es同义）
+    dw 0                           ; 缓冲区段
+    dd 0                           ; 起始LBA地址（低32位）
+    dd 0                           ; 起始LBA地址（高32位）
