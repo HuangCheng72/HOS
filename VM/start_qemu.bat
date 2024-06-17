@@ -1,0 +1,1 @@
+qemu-system-i386 -M pc -m 64M -monitor stdio -hda HOS.raw -boot c
