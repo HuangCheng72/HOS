@@ -8,6 +8,9 @@
 // 这是个虚拟设备
 // 不是实际存在的设备，只是为了保证同步抽象出来的
 
+// 终端初始化
+void console_init();
+
 // 终端打印字符串
 void console_put_str(const char* str);
 
@@ -16,6 +19,9 @@ void console_put_char(char char_asci);
 
 // 终端打印16进制整数
 void console_put_int(int num);
+
+// 终端打印格式化字符串
+void console_printf(const char* format, ...);
 
 
 #endif //HOS_CONSOLE_H
