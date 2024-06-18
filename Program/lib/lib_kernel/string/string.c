@@ -113,3 +113,165 @@ uint32_t strchrs(const char* str, uint8_t ch) {
     }
     return ch_cnt;
 }
+
+void int_to_str(int num, char *buffer) {
+    int i = 0;
+    int is_negative = 0;
+
+    if (num < 0) {
+        is_negative = 1;
+        num = -num;
+    }
+
+    do {
+        buffer[i++] = (num % 10) + '0';
+        num /= 10;
+    } while (num > 0);
+
+    if (is_negative) {
+        buffer[i++] = '-';
+    }
+
+    buffer[i] = '\0';
+
+    for (int j = 0; j < i / 2; ++j) {
+        char temp = buffer[j];
+        buffer[j] = buffer[i - j - 1];
+        buffer[i - j - 1] = temp;
+    }
+}
+
+void uint_to_str(unsigned int num, char *buffer) {
+    int i = 0;
+
+    do {
+        buffer[i++] = (num % 10) + '0';
+        num /= 10;
+    } while (num > 0);
+
+    buffer[i] = '\0';
+
+    for (int j = 0; j < i / 2; ++j) {
+        char temp = buffer[j];
+        buffer[j] = buffer[i - j - 1];
+        buffer[i - j - 1] = temp;
+    }
+}
+
+void hex_to_str(unsigned int num, char *buffer) {
+    const char *digits = "0123456789abcdef";
+    int i = 0;
+
+    do {
+        buffer[i++] = digits[num % 16];
+        num /= 16;
+    } while (num > 0);
+
+    buffer[i] = '\0';
+
+    for (int j = 0; j < i / 2; ++j) {
+        char temp = buffer[j];
+        buffer[j] = buffer[i - j - 1];
+        buffer[i - j - 1] = temp;
+    }
+}
+
+void ptr_to_str(void* ptr, char* buffer) {
+    unsigned long addr = (unsigned long)ptr;
+    hex_to_str(addr, buffer);
+}
+
+void double_to_str(double num, char* buffer, int precision) {
+    if (precision < 0) {
+        precision = 6;
+    }
+
+    int int_part = (int)num;
+    double frac_part = num - int_part;
+
+    int_to_str(int_part, buffer);
+    while (*buffer) buffer++;
+
+    *buffer++ = '.';
+
+    for (int i = 0; i < precision; ++i) {
+        frac_part *= 10;
+        int digit = (int)frac_part;
+        *buffer++ = '0' + digit;
+        frac_part -= digit;
+    }
+
+    *buffer = '\0';
+}
+
+int sprintf(char* buffer, const char* format, ...) {
+    const char* p = format;
+    int* arg = (int*)(void*)(&format + 1);
+    char* buf_ptr = buffer;
+    char temp_buffer[32];
+
+    while (*p) {
+        if (*p == '%' && *(p + 1) != '\0') {
+            p++;
+            int width = 0;
+            int precision = -1;
+
+            while (*p >= '0' && *p <= '9') {
+                width = width * 10 + (*p - '0');
+                p++;
+            }
+
+            if (*p == '.') {
+                p++;
+                precision = 0;
+                while (*p >= '0' && *p <= '9') {
+                    precision = precision * 10 + (*p - '0');
+                    p++;
+                }
+            }
+
+            switch (*p) {
+                case 'd':
+                    int_to_str(*arg++, temp_buffer);
+                    break;
+                case 'u':
+                    uint_to_str(*arg++, temp_buffer);
+                    break;
+                case 'x':
+                    hex_to_str(*arg++, temp_buffer);
+                    break;
+                case 'c':
+                    *temp_buffer = (char)*arg++;
+                    temp_buffer[1] = '\0';
+                    break;
+                case 's': {
+                    char* str = (char*)*arg++;
+                    while (*str) {
+                        *buf_ptr++ = *str++;
+                    }
+                    continue;
+                }
+                case 'p':
+                    ptr_to_str((void*)*arg++, temp_buffer);
+                    break;
+                case 'f':
+                    double_to_str(*(double*)arg++, temp_buffer, precision);
+                    break;
+                default:
+                    *buf_ptr++ = '%';
+                    *buf_ptr++ = *p;
+                    continue;
+            }
+
+            char* temp_ptr = temp_buffer;
+            while (*temp_ptr) {
+                *buf_ptr++ = *temp_ptr++;
+            }
+        } else {
+            *buf_ptr++ = *p;
+        }
+        p++;
+    }
+    *buf_ptr = '\0';
+    return buf_ptr - buffer;
+}

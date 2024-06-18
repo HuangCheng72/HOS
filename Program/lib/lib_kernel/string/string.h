@@ -19,4 +19,12 @@ char* strrchr(const char* string, const uint8_t ch);
 char* strcat(char* dst_, const char* src_);
 uint32_t strchrs(const char* filename, uint8_t ch);
 
+// sprintf及其使用的转换函数
+int sprintf(char* buffer, const char* format, ...);
+void int_to_str(int num, char *buffer);
+void uint_to_str(unsigned int num, char *buffer);
+void hex_to_str(unsigned int num, char *buffer);
+void ptr_to_str(void* ptr, char* buffer);
+void double_to_str(double num, char* buffer, int precision);
+
 #endif //HOS_STRING_H
