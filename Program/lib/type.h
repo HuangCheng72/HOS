@@ -36,4 +36,10 @@ typedef uint64_t size_t;
 #define UINT32_MAX 0xffffffffU  /* 4294967295U */
 #define UINT64_MAX 0xffffffffffffffffULL /* 18446744073709551615ULL */
 
+// 用枚举定义的布尔值
+typedef enum {
+    false = 0,
+    true
+}bool;
+
 #endif //HOS_TYPE_H

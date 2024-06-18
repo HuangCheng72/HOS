@@ -6,12 +6,6 @@
 #include "../../kernel/kernel_buffer/kernel_buffer.h"
 #include "../../kernel/kernel_device/kernel_device.h"
 
-// 它非要用bool，那我就搞一个枚举bool
-typedef enum {
-    false,
-    true
-}bool;
-
 #define KBD_BUF_PORT 0x60	 // 键盘buffer寄存器端口号为0x60
 
 /* 用转义字符定义部分控制字符 */
