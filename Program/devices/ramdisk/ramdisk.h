@@ -14,6 +14,10 @@
 #define BLOCK_SIZE (64 * 1024) // NOR闪存块大小，通常为64KB
 #define WRITE_GRANULARITY 4 // 写入粒度为4字节（一个字）
 
+// 擦除块操作
+int32_t erase_block(uint32_t block_number);
+// 粒度4KB的擦除块操作
+int32_t erase_block_4K(uint32_t addr);
 int32_t ramdisk_read(char *args, uint32_t args_size);
 int32_t ramdisk_write(char *args, uint32_t args_size);
 

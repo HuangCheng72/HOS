@@ -20,6 +20,9 @@ extern "C"{
 // at least 2 Sectors (=8kB) Maximum is 2GB, for 3-Byte SPI-Flash: Maximum 16MB
 // #define DEBUG_FORCE_MINIDISK_DENSITY 0x0F // (1<<x), but >= 2 Sectors, here 0xF: 32kB = 8 Sectors
 
+// 把类型定义载入
+#include "../lib/type.h"
+
 #define MIN_DENSITY 0x0D   	// 0x13: 512k, smaller doesn not make sense, except for tests, 0x0D is the minimum
 #define MAX_DENSITY 0x18    // 0x18: 16 MB is the maximum for 3-byte addressed Flash. (But up to 2GB is possible)
 

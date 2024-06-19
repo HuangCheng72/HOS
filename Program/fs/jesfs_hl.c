@@ -22,16 +22,30 @@
  *******************************************************************************/
 
 /* Required Std. headers */
-#include <stddef.h>
-#include <stdint.h>
 
+// 类型定义已经在jesfs.h和jesfs_int.h里面写了，这里就不用include了
+#include "../lib/lib_kernel/lib_kernel.h"
 //---------------------------------------------- JESFS-START ----------------------
 #include "jesfs.h"
 #include "jesfs_int.h"
 
-extern uint32_t _time_get(void);      // We need Unix-Seconds, must be defined outside - UserProvided!
+//extern uint32_t _time_get(void);      // We need Unix-Seconds, must be defined outside - UserProvided!
+//extern int16_t _supply_voltage_check(void);  // Return 0 if Power is OK, else  Error -147
+
+// 这两个都需要外部操作系统的支持
+// _time_get是获取时间戳，_supply_voltage_check是检查当前设备电压是否正常
+
+// 为了实现_time_get，实现了rtc_cmos驱动
+// 这个写在rtc_cmos驱动里面
+extern uint32_t _time_get(void);
+
+int16_t _supply_voltage_check(void) {
+    // 虚拟机，没那么多讲究，电压永远正常
+    return 0;
+}
+
 static uint32_t _static_time = 0; // If <>0: time used for fs_open() with Create or fs_format()
-extern int16_t _supply_voltage_check(void);  // Return 0 if Power is OK, else  Error -147
+
 
 // Driver designed for 4k-Flash (or larger) - JesFs
 #if SF_SECTOR_PH != 4096

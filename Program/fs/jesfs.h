@@ -91,7 +91,10 @@ extern "C"{
 //#define SF_TX_TRANSFER_LIMIT 64
 
 // Define this macro for additional statistics
-#define JSTAT 
+#define JSTAT
+
+// 把类型定义载入
+#include "../lib/type.h"
 
 // Sample-Flash ID MACRONIX (Ultra-Low-Power), add others
 #define MACRONIX_MANU_TYP_RX    0xC228  // Macronix MX25R-Low-Power-Series first 2 ID-Bytes (without Density)

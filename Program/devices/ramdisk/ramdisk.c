@@ -36,6 +36,15 @@ int32_t erase_block(uint32_t block_number) {
     return 0;
 }
 
+// 文件系统的擦除要求是4KB，适配
+int32_t erase_block_4K(uint32_t addr) {
+    if(addr > RAMDISK_SIZE - 0x1000) {
+        return -1;
+    }
+    memset((char *)addr, 0xff, 0x1000);
+    return 0;
+}
+
 int32_t ramdisk_read(char *args, uint32_t args_size) {
     if(args_size != sizeof(struct ramdisk_io_request)) {
         return -1;
@@ -55,29 +64,12 @@ int32_t ramdisk_write(char *args, uint32_t args_size) {
     }
     struct ramdisk_io_request *request = (struct ramdisk_io_request *)args;
 
-    uint32_t start_address = request->address;
-    uint32_t end_address = start_address + request->size;
-
-    if (end_address > RAMDISK_SIZE) {
+    if (request->address + request->size > RAMDISK_SIZE) {
         return -1; // 超出范围
     }
 
-    uint32_t start_block = start_address / BLOCK_SIZE;
-    uint32_t end_block = (end_address + BLOCK_SIZE - 1) / BLOCK_SIZE;
-
-    // 写之前要擦除块
-    for (uint32_t block = start_block; block < end_block; ++block) {
-        if (erase_block(block) != 0) {
-            return -1;
-        }
-    }
-
-    // 写入操作需要考虑粒度
-    for (uint32_t addr = start_address; addr < end_address; addr += WRITE_GRANULARITY) {
-        uint32_t remaining = end_address - addr;
-        uint32_t write_size = remaining < WRITE_GRANULARITY ? remaining : WRITE_GRANULARITY;
-        memcpy(ramdisk + addr, request->buffer + (addr - start_address), write_size);
-    }
+    // 不擦除了，直接写
+    memcpy(ramdisk + request->address, request->buffer, request->size);
 
     return request->size;
 }

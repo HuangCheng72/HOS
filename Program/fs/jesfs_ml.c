@@ -11,8 +11,8 @@
 //#include <stdio.h>
 
 /* Required Std. headers */
-#include <stddef.h>
-#include <stdint.h>
+
+// 类型定义已经在jesfs.h和jesfs_int.h里面写了，这里就不用include了
 
 #include "jesfs.h"
 #include "jesfs_int.h"
