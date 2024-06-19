@@ -105,11 +105,11 @@ typedef struct {
 
 // GDT修改，挪到0x1500之后，和IDT放在一块吧（0x1500之前全部留给栈使用）
 // IDT结束位置是0x10800
-#define NEW_GDT_BASE_ADDR 0x10800
+#define NEW_GDT_BASE_ADDR 0x30800
 // GDT有32条，每条8字节，一共是256字节，即0x100
 // 则GDT的结束地址是0x108ff（映射高地址就是0xc00108ff）
 // TSS暂时先放在这里
-#define TSS_ADDR 0xc0010900
+#define TSS_ADDR 0xc0030900
 
 // 调整GDT到高地址处（内核所在的虚拟地址上）
 void setup_gdt();

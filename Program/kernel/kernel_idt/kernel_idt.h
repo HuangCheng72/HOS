@@ -56,7 +56,7 @@ typedef struct {
 
 // 因为要把0x1500之前全部留给栈，把IDT挪个位置，放到0x10000去
 
-#define IDT_BASE_ADDR 0x10000            // idt在内存中的起始地址
+#define IDT_BASE_ADDR 0x30000            // idt在内存中的起始地址
 #define IDT_SIZE 256                    // 预留的IDT描述符个数
 #define HIGH_ADDR_OFFSET 0xc0000000     // 往高地址的偏移量
 
