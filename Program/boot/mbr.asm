@@ -25,22 +25,22 @@ SECTION MBR vstart=0x7c00
 ; 读入Loader和内核
 
     ; 设置磁盘地址包
-    mov byte [disk_address_packet], 16              ; 包大小
-    mov byte [disk_address_packet + 1], 0           ; 保留字段
-    mov word [disk_address_packet + 2], 120         ; 要读取的扇区数
-    mov word [disk_address_packet + 4], 0           ; 缓冲区偏移量（数值是整数，自然可以写死为0）
+    mov byte [disk_address_packet_loader], 16              ; 包大小
+    mov byte [disk_address_packet_loader + 1], 0           ; 保留字段
+    mov word [disk_address_packet_loader + 2], 4         ; 要读取的扇区数
+    mov word [disk_address_packet_loader + 4], 0           ; 缓冲区偏移量（数值是整数，自然可以写死为0）
     ; 计算目标地址段
     mov ax, LOADER_BASE_ADDR
     shr ax, 4
-    mov word [disk_address_packet + 6], ax          ; 缓冲区段
+    mov word [disk_address_packet_loader + 6], ax          ; 缓冲区段
     xor ax, ax
-    mov word [disk_address_packet + 8], LOADER_START_SECTOR      ; 起始LBA地址（低32位）主要是因为LOADER_START_SECTOR小，所以可以直接写到低位，不然就要拆分了
-    mov word [disk_address_packet + 12], 0                       ; 起始LBA地址（高32位）
+    mov word [disk_address_packet_loader + 8], LOADER_START_SECTOR      ; 起始LBA地址（低32位）主要是因为LOADER_START_SECTOR小，所以可以直接写到低位，不然就要拆分了
+    mov word [disk_address_packet_loader + 12], 0                       ; 起始LBA地址（高32位）
 
     ; 设置BIOS中断0x13的参数
     mov ah, 0x42                       ; 扩展读取功能
     mov dl, 0x80                       ; 驱动器号，第一个硬盘
-    lea si, [disk_address_packet]      ; 磁盘地址包指针
+    lea si, [disk_address_packet_loader]      ; 磁盘地址包指针
     int 0x13                           ; 调用BIOS中断
     jc error                           ; 如果出错，跳转到错误处理
 
@@ -52,7 +52,7 @@ error:
 
 
 ; 地址包，所谓DAP，这是BIOS 0x13号中断的0x42功能所需的参数列表
-disk_address_packet:
+disk_address_packet_loader:
     db 16                          ; 包大小
     db 0                           ; 保留字段
     dw 0                           ; 要读取的扇区数
