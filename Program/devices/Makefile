@@ -5,9 +5,10 @@ PIT8253_DIR = pit8253
 CONSOLE_DIR = console
 KEYBOARD_DIR = keyboard
 RAMDISK_DIR = ramdisk
+RTC_CMOS_DIR = rtc_cmos
 
 # 标签标记所有的任务（输出什么文件），方便修改
-DEVICE_OBJS = pit8253.o console.o keyboard.o ramdisk.o
+DEVICE_OBJS = pit8253.o console.o keyboard.o ramdisk.o rtc_cmos.o
 
 .PHONY: all
 
@@ -25,6 +26,9 @@ keyboard.o:
 
 ramdisk.o:
 	$(MAKE) -C $(RAMDISK_DIR) GCC=$(GCC) AS=$(AS)
+
+rtc_cmos.o:
+	$(MAKE) -C $(RTC_CMOS_DIR) GCC=$(GCC) AS=$(AS)
 
 # 清理规则
 clean:
