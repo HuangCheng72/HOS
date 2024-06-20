@@ -19,9 +19,9 @@ typedef struct {
 
 // RTC CMOS 获取当前时间
 void rtc_get_time(rtc_time_t *time);
-// 时间转换为时间戳
+// 将RTC时间转换为时间戳
 uint32_t get_unix_timestamp(rtc_time_t* time);
 // 取现行时间戳
-uint32_t _time_get(void);
+uint32_t get_unix_timestamp_now(void);
 
 #endif //HOS_RTC_CMOS_H

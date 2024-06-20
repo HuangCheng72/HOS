@@ -41,19 +41,43 @@ void rtc_get_time(rtc_time_t *time) {
     time->year = bcd_to_bin(cmos_read(0x09)) + 2000;  // Assuming the RTC gives year as two-digit BCD
 }
 
+// 每个月的天数数组
+static const uint8_t days_in_month[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
+// 将RTC时间转换为时间戳
 uint32_t get_unix_timestamp(rtc_time_t *time) {
-    // Convert rtc_time_t to Unix timestamp
-    // This is a simplified example and might not handle leap years and other details correctly
-    // A more robust implementation would be needed for production use
+    uint32_t days = 0;
+    uint32_t year = time->year;
+    uint32_t month = time->month;
+    uint32_t day = time->day;
 
-    uint32_t days = (time->year - 1970) * 365 + (time->year - 1969) / 4;
-    days += (time->month - 1) * 30 + time->day;
+    // 计算从1970年到当前年份的总天数
+    for (uint32_t y = 1970; y < year; y++) {
+        days += (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)) ? 366 : 365;
+    }
 
-    return days * 86400 + time->hour * 3600 + time->minute * 60 + time->second;
+    // 计算当前年份中从1月到当前月份的总天数
+    for (uint32_t m = 1; m < month; m++) {
+        days += days_in_month[m - 1];
+        if (m == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))) {
+            days += 1; // 闰年二月增加一天
+        }
+    }
+
+    // 加上当前月份的天数
+    days += day - 1;
+
+    // 计算总秒数
+    uint32_t total_seconds = days * 86400;
+    total_seconds += time->hour * 3600;
+    total_seconds += time->minute * 60;
+    total_seconds += time->second;
+
+    return total_seconds;
 }
 
 // 取现行时间戳
-uint32_t _time_get(void) {
+uint32_t get_unix_timestamp_now(void) {
     rtc_time_t time;
     rtc_get_time(&time);
     return get_unix_timestamp(&time);
