@@ -156,8 +156,8 @@ bool convert_dir_to_file(uint32_t dir_sector_idx, uint32_t fileMetaSector_idx);
 
 // 额外的工具函数
 
-// 计算文件的crc32，参数是文件元信息指针
-uint32_t fileCrc32(FileMetaInfo *fmi);
+// 计算文件的crc32，参数是文件元信息扇区（直接更新写入外存）
+void fileCrc32(uint32_t fileMetaSector_idx);
 
 /************************************ 高级层（直接支持对外暴露的文件读写接口的实现）************************************/
 

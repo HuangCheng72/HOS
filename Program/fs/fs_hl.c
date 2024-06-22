@@ -1142,14 +1142,13 @@ uint32_t file_write_context(uint32_t fileMetaSector_idx, uint32_t pos, void *buf
         current_sector++;
     }
 
-    // 更新文件元信息
+    // 更新文件元信息到外存
     fmi.fileLength = current_pos;
     fmi.modificationTime = get_unix_timestamp_now();
-    fmi.fileCrc32 = fileCrc32(&fmi);
-
-    // 写出文件元信息
+    // 写出文件元信息（然后才能更新crc32）
     memcpy(fs_buffer, &fmi, sizeof(FileMetaInfo));
     write_sector(fmi.sector_idx);
+
     return bytes_written;
 }
 
@@ -1195,14 +1194,18 @@ void init_crc32_table() {
     }
 }
 
-// 计算文件的crc32，参数是文件元信息指针
-uint32_t fileCrc32(FileMetaInfo *fmi){
+// 计算文件的crc32，参数是文件元信息扇区（直接更新写入外存）
+void fileCrc32(uint32_t fileMetaSector_idx){
+
+    FileMetaInfo fmi;
+    read_sector(fileMetaSector_idx);
+    memcpy(&fmi, fs_buffer, sizeof(FileMetaInfo));
 
     // 初始化 CRC32 值
     uint32_t crc = 0xffffffff;
 
     // 获取第一个文件扇区索引
-    uint32_t current_sector_idx = fmi->next_file_sector_idx;
+    uint32_t current_sector_idx = fmi.next_file_sector_idx;
 
     // 遍历文件扇区链表
     while (current_sector_idx != 0) {
@@ -1226,6 +1229,9 @@ uint32_t fileCrc32(FileMetaInfo *fmi){
         current_sector_idx = file_info->next_file_sector_idx;
     }
 
-    // 返回最终的 CRC32 值
-    return crc ^ 0xffffffff;
+    // 更新最终的 crc32 值到文件元数据
+    fmi.fileCrc32 = crc ^ 0xffffffff;
+    // 写到外存
+    memcpy(fs_buffer, &fmi, sizeof(FileMetaInfo));
+    write_sector(fmi.sector_idx);
 }

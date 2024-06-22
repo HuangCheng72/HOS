@@ -99,7 +99,8 @@ int16_t fs_close(FS_DESC *pdesc) {
         return -1;
     }
     // 因为内容保存工作都被其他操作做了
-    // 所以这里直接不做任何操作
+    // 所以这里只用来更新crc32
+    fileCrc32(pdesc->fmi_sector_idx);
     return 0;
 }
 
@@ -186,7 +187,7 @@ int16_t fs_rename(FS_DESC *pdesc, const char *pname) {
 // 获取文件的 CRC32 值
 uint32_t fs_get_crc32(FS_DESC *pdesc) {
     if(!pdesc || !pdesc->dir_sector_idx) {
-        // 文件不存在的话要返回0xffffffff
+        // 目录不存在的话要返回0xffffffff
         return 0xffffffff;
     }
     if(pdesc->fmi_sector_idx == 0) {
