@@ -1209,7 +1209,7 @@ void fileCrc32(uint32_t fileMetaSector_idx){
     while (current_sector_idx != 0) {
         // 校验文件扇区
         if (!is_valid_fileInfo(current_sector_idx)) {
-            return 0xffffffff; // 无效的文件扇区
+            return; // 无效的文件扇区
         }
 
         // 读取文件扇区

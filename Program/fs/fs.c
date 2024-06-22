@@ -327,4 +327,3 @@ uint32_t fs_date_to_timestamp(FS_DATE *pd) {
 
     return total_seconds;
 }
-
