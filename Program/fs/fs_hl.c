@@ -1175,25 +1175,6 @@ bool convert_dir_to_file(uint32_t dir_sector_idx, uint32_t fileMetaSector_idx) {
 
 // 下面是通过查表法速算crc32摘要算法
 
-// 查找表（限制作用域在本文件范围内）
-static uint32_t crc32_table[256];
-
-// 初始化crc32查找表
-void init_crc32_table() {
-    uint32_t polynomial = 0xedb88320;
-    for (uint32_t i = 0; i < 256; i++) {
-        uint32_t crc = i;
-        for (uint32_t j = 8; j > 0; j--) {
-            if (crc & 1) {
-                crc = (crc >> 1) ^ polynomial;
-            } else {
-                crc = crc >> 1;
-            }
-        }
-        crc32_table[i] = crc;
-    }
-}
-
 // 计算文件的crc32，参数是文件元信息扇区（直接更新写入外存）
 void fileCrc32(uint32_t fileMetaSector_idx){
 
@@ -1201,11 +1182,28 @@ void fileCrc32(uint32_t fileMetaSector_idx){
     read_sector(fileMetaSector_idx);
     memcpy(&fmi, fs_buffer, sizeof(FileMetaInfo));
 
+    // 初始化crc32表
+    uint32_t crc32_table[256];
+    uint32_t polynomial = 0xedb88320;
+    for (uint32_t i = 0; i < 256; i++) {
+        uint32_t temp_crc = i;
+        for (uint32_t j = 8; j > 0; j--) {
+            if (temp_crc & 1) {
+                temp_crc = (temp_crc >> 1) ^ polynomial;
+            } else {
+                temp_crc = temp_crc >> 1;
+            }
+        }
+        crc32_table[i] = temp_crc;
+    }
+
     // 初始化 CRC32 值
     uint32_t crc = 0xffffffff;
 
     // 获取第一个文件扇区索引
     uint32_t current_sector_idx = fmi.next_file_sector_idx;
+    // 需要计算的字符数
+    uint32_t count = fmi.fileLength;
 
     // 遍历文件扇区链表
     while (current_sector_idx != 0) {
@@ -1219,7 +1217,8 @@ void fileCrc32(uint32_t fileMetaSector_idx){
         FileInfo *file_info = (FileInfo *)fs_buffer;
 
         // 计算当前扇区数据的 CRC32
-        for (uint32_t i = 0; i < sizeof(file_info->data); i++) {
+        // 每个文件扇区都有500字节的存储单位
+        for (uint32_t i = 0; i < 500 && count > 0; i++, count--) {
             uint8_t byte = file_info->data[i];
             uint32_t lookupIndex = (crc ^ byte) & 0xff;
             crc = (crc >> 8) ^ crc32_table[lookupIndex];
