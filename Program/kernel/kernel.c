@@ -55,68 +55,98 @@ void test_fs() {
     FS_DESC fileDesc;
     FS_STAT fileStat;
     uint8_t readBuffer[512];
-    const char *testFilename = "testfile.txt";
     const char *testData = "This is a test string for the file system.";
     int16_t result;
 
     // 启动文件系统
     result = fs_start();
     if (result != 0) {
-        console_printf("Failed to start file system.\n");
         return;
     }
-    console_printf("File system started.\n");
 
     // 格式化文件系统（完全格式化）
     result = fs_format(FS_FORMAT_FULL);
     if (result != 0) {
-        console_printf("Failed to format file system.\n");
         fs_exit();
         return;
     }
-    console_printf("File system formatted.\n");
 
     // 打开文件（创建并写入）
-    result = fs_open(&fileDesc, (char *)testFilename);
+    result = fs_open(&fileDesc, "/home/user/testfile.txt");
     if (result < 0) {
-        console_printf("%d Failed to open file: %s\n", result, testFilename);
         fs_exit();
         return;
     }
-    console_printf("File opened: %s\n", testFilename);
 
     // 写入文件
     result = fs_write(&fileDesc, (uint8_t *)testData, strlen(testData));
     if (result < 0) {
-        console_printf("%d Failed to write file: %s\n", result, testFilename);
         fs_close(&fileDesc);
         fs_exit();
         return;
     }
-    console_printf("Data written to file: %s\n", testFilename);
 
     // 关闭文件
     result = fs_close(&fileDesc);
     if (result != 0) {
-        console_printf("Failed to close file: %s\n", testFilename);
         fs_exit();
         return;
     }
-    console_printf("File closed: %s\n", testFilename);
 
-    // 重新打开文件（读取）
-    result = fs_open(&fileDesc, (char *)testFilename);
-    if (result != 0) {
-        console_printf("Failed to reopen file: %s\n", testFilename);
+    console_printf("----------------------------------------------------------------\n");
+
+    // 重新打开/home/user/testfile.txt 文件
+    result = fs_open(&fileDesc, "/home/user/testfile.txt");
+    if (result < 0) {
+        console_printf("Failed to open file: /home/user/testfile.txt\n");
         fs_exit();
         return;
     }
-    console_printf("File reopened: %s\n", testFilename);
+    console_printf("File opened: /home/user/testfile.txt\n");
+
+    // 移动前获取文件信息
+    result = fs_info(&fileDesc, &fileStat);
+    if (result != 0) {
+        console_printf("Failed to get file info: /home/user/testfile.txt\n");
+        fs_close(&fileDesc);
+        fs_exit();
+        return;
+    }
+    console_printf("Before move. File info - Name: %s, Length: %u, Created: %u, Modified: %u, CRC32: %08x\n",
+                   fileStat.fname, fileStat.file_len, fileStat.file_ctime, fileStat.file_mtime, fileStat.file_crc32);
+
+    // 并将其移动到 /home/user/newdir/ 目录
+    result = fs_move(&fileDesc, "/home/user/newdir/");
+    if (result != 0) {
+        console_printf("Failed to move file to directory: /home/user/newdir/\n");
+        return;
+    }
+    console_printf("File moved: /home/user/testfile.txt to /home/user/newdir/\n");
+
+    // 关闭文件
+    result = fs_close(&fileDesc);
+    if (result != 0) {
+        console_printf("Failed to close file: /home/user/testfile.txt\n");
+        fs_exit();
+        return;
+    }
+    console_printf("File closed: /home/user/testfile.txt\n");
+
+    // 检查文件是否成功移动
+
+    // 以新路径打开
+    result = fs_open(&fileDesc, "/home/user/newdir/testfile.txt");
+    if (result != 0) {
+        console_printf("%d Failed to opened file: /home/user/newdir/testfile.txt\n", result);
+        fs_exit();
+        return;
+    }
+    console_printf("File opened: /home/user/newdir/testfile.txt\n");
 
     // 读取文件
     result = fs_read(&fileDesc, readBuffer, sizeof(readBuffer) - 1);
     if (result < 0) {
-        console_printf("Failed to read from file: %s\n", testFilename);
+        console_printf("Failed to read from file: /home/user/newdir/testfile.txt\n");
         fs_close(&fileDesc);
         fs_exit();
         return;
@@ -126,64 +156,22 @@ void test_fs() {
     // 获取文件信息
     result = fs_info(&fileDesc, &fileStat);
     if (result != 0) {
-        console_printf("Failed to get file info: %s\n", testFilename);
+        console_printf("Failed to get file info: /home/user/newdir/testfile.txt\n");
         fs_close(&fileDesc);
         fs_exit();
         return;
     }
-    console_printf("File info - Name: %s, Length: %u, Created: %u, Modified: %u, CRC32: %08x\n",
+    console_printf("After move. File info - Name: %s, Length: %u, Created: %u, Modified: %u, CRC32: %08x\n",
            fileStat.fname, fileStat.file_len, fileStat.file_ctime, fileStat.file_mtime, fileStat.file_crc32);
-
-    // 重置文件位置
-    result = fs_rewind(&fileDesc);
-    if (result != 0) {
-        console_printf("Failed to rewind file: %s\n", testFilename);
-        fs_close(&fileDesc);
-        fs_exit();
-        return;
-    }
-    console_printf("File rewinded: %s\n", testFilename);
-
-    // 重命名文件
-    const char *newFilename = "new_testfile.txt";
-    result = fs_rename(&fileDesc, newFilename);
-    if (result < 0) {
-        console_printf("Failed to rename file: %s to %s\n", testFilename, newFilename);
-        fs_close(&fileDesc);
-        fs_exit();
-        return;
-    }
-    console_printf("File renamed to: %s\n", newFilename);
-
-    // 重命名后再次获取文件信息
-    result = fs_info(&fileDesc, &fileStat);
-    if (result != 0) {
-        console_printf("Failed to get file info: %s\n", testFilename);
-        fs_close(&fileDesc);
-        fs_exit();
-        return;
-    }
-    console_printf("After rename. File info - Name: %s, Length: %u, Created: %u, Modified: %u, CRC32: %08x\n",
-                   fileStat.fname, fileStat.file_len, fileStat.file_ctime, fileStat.file_mtime, fileStat.file_crc32);
-
-    // 删除文件
-    result = fs_delete(&fileDesc);
-    if (result < 0) {
-        console_printf("Failed to delete file: %s\n", newFilename);
-        fs_close(&fileDesc);
-        fs_exit();
-        return;
-    }
-    console_printf("File deleted: %s\n", newFilename);
 
     // 关闭文件
     result = fs_close(&fileDesc);
     if (result != 0) {
-        console_printf("Failed to close file after deletion: %s\n", newFilename);
+        console_printf("Failed to close file after all: /home/user/newdir/testfile.txt\n");
         fs_exit();
         return;
     }
-    console_printf("File closed after deletion: %s\n", newFilename);
+    console_printf("File closed after all: /home/user/newdir/testfile.txt\n");
 
     // 退出文件系统
     result = fs_exit();
