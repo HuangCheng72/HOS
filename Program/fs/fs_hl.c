@@ -368,7 +368,7 @@ bool create_directory(const char *name, uint32_t parent_sector_idx, uint32_t fil
     // 把父目录信息从缓冲区保存到临时变量，等下要用到
     read_sector(parent_sector_idx);
     DirectoryInfo parent_dir;
-    memcpy(&parent_dir, fs_buffer, 512);
+    memcpy(&parent_dir, fs_buffer, sizeof(DirectoryInfo));
 
     if (parent_dir.subdirectory_sector_idx == 0) {
         // 父目录没有子目录，直接将新目录设置为父目录保存的子目录结点
@@ -378,31 +378,35 @@ bool create_directory(const char *name, uint32_t parent_sector_idx, uint32_t fil
         // 父目录的子目录结点是当前目录的兄弟，作为头结点存在
         read_sector(parent_dir.subdirectory_sector_idx);
         DirectoryInfo sibling_dir;
-        memcpy(&sibling_dir, fs_buffer, 512);
+        memcpy(&sibling_dir, fs_buffer, sizeof(DirectoryInfo));
 
         // 为了节省栈内存，sibling_dir要前后代表两个不同的值
         // 其实如果是只有单独一个兄弟的情况可以特殊处理，少读一个tail_sibling_dir，这里懒，为了统一，直接全读了
 
         // 之前已经固定每个新目录的前后兄弟目录都指向自己
         // 然后就是双向链表标准流程了
+
+        // 先记录下尾结点的扇区索引，不然修改之后就丢失了
+        uint32_t tail_node_sector_idx = sibling_dir.prevSiblingDirectory_sector_idx;
+
         sibling_dir.prevSiblingDirectory_sector_idx = new_dir.sector_idx;       // 头结点的prev指向新加入的结点
         new_dir.nextSiblingDirectory_sector_idx = sibling_dir.sector_idx;       // 新结点的next指向头结点
 
         // 更新头结点校验和，写出到外存
         update_checksum(&sibling_dir);
-        memcpy(fs_buffer, &sibling_dir, 512);
+        memcpy(fs_buffer, &sibling_dir, sizeof(DirectoryInfo));
         write_sector(sibling_dir.sector_idx);
 
         // 读最后一个结点（尾结点），此时内存中sibling_dir还是头结点的值
-        read_sector(sibling_dir.prevSiblingDirectory_sector_idx);
-        memcpy(&sibling_dir, fs_buffer, 512);
+        read_sector(tail_node_sector_idx);
+        memcpy(&sibling_dir, fs_buffer, sizeof(DirectoryInfo));
         // 此时sibling_dir是尾结点tail
         sibling_dir.nextSiblingDirectory_sector_idx = new_dir.sector_idx;       // 原先tail的next指向新结点
         new_dir.prevSiblingDirectory_sector_idx = sibling_dir.sector_idx;       // 新结点的prev指向原先的tail
 
         // 更新尾结点校验和，写出到外存
         update_checksum(&sibling_dir);
-        memcpy(fs_buffer, &sibling_dir, 512);
+        memcpy(fs_buffer, &sibling_dir, sizeof(DirectoryInfo));
         write_sector(sibling_dir.sector_idx);
     }
 
@@ -411,13 +415,13 @@ bool create_directory(const char *name, uint32_t parent_sector_idx, uint32_t fil
     // 更新父目录校验和
     update_checksum(&parent_dir);
     // 写出父目录
-    memcpy(fs_buffer, &parent_dir, 512);
+    memcpy(fs_buffer, &parent_dir, sizeof(DirectoryInfo));
     write_sector(parent_dir.sector_idx);
 
 
     // 更新创建目录的校验和，写出这个新目录到新分配的扇区
     update_checksum(&new_dir);
-    memcpy(fs_buffer, &new_dir, 512);
+    memcpy(fs_buffer, &new_dir, sizeof(DirectoryInfo));
     write_sector(new_dir.sector_idx);
 
     // 更新文件元信息的计数器
@@ -443,7 +447,7 @@ bool move_directory(uint32_t src_sector_idx, uint32_t dest_sector_idx) {
     // 读取信息
     read_sector(src_sector_idx);
     DirectoryInfo src_dir_info;
-    memcpy(&src_dir_info, fs_buffer, 512);
+    memcpy(&src_dir_info, fs_buffer, sizeof(DirectoryInfo));
     // 移动位置就是当前位置（目标目录就是当前目录的父目录）
     if(src_dir_info.parentDirectory_sector_idx == dest_sector_idx) {
         // 不用移动，直接完成
@@ -458,7 +462,7 @@ bool move_directory(uint32_t src_sector_idx, uint32_t dest_sector_idx) {
     // 先获取父目录
     read_sector(src_dir_info.parentDirectory_sector_idx);
     DirectoryInfo parent_dir_info;
-    memcpy(&parent_dir_info, fs_buffer, 512);
+    memcpy(&parent_dir_info, fs_buffer, sizeof(DirectoryInfo));
 
     // 备用，可能用来存放兄弟目录的地方
     DirectoryInfo sibling_dir_info;
@@ -477,20 +481,20 @@ bool move_directory(uint32_t src_sector_idx, uint32_t dest_sector_idx) {
 
         // 取前兄弟结点，它的next直接接当前目录的next
         read_sector(src_dir_info.prevSiblingDirectory_sector_idx);
-        memcpy(&sibling_dir_info, fs_buffer, 512);
+        memcpy(&sibling_dir_info, fs_buffer, sizeof(DirectoryInfo));
         sibling_dir_info.nextSiblingDirectory_sector_idx = src_dir_info.nextSiblingDirectory_sector_idx;
         // 写出前兄弟结点到外存
         update_checksum(&sibling_dir_info);
-        memcpy(fs_buffer, &sibling_dir_info, 512);
+        memcpy(fs_buffer, &sibling_dir_info, sizeof(DirectoryInfo));
         write_sector(sibling_dir_info.sector_idx);
 
         // 取后兄弟结点，它的prev直接接当前目录的prev
         read_sector(src_dir_info.nextSiblingDirectory_sector_idx);
-        memcpy(&sibling_dir_info, fs_buffer, 512);
+        memcpy(&sibling_dir_info, fs_buffer, sizeof(DirectoryInfo));
         sibling_dir_info.prevSiblingDirectory_sector_idx = src_dir_info.prevSiblingDirectory_sector_idx;
         // 写出后兄弟结点到外存
         update_checksum(&sibling_dir_info);
-        memcpy(fs_buffer, &sibling_dir_info, 512);
+        memcpy(fs_buffer, &sibling_dir_info, sizeof(DirectoryInfo));
         write_sector(sibling_dir_info.sector_idx);
 
         if(parent_dir_info.subdirectory_sector_idx == src_dir_info.sector_idx) {
@@ -508,13 +512,13 @@ bool move_directory(uint32_t src_sector_idx, uint32_t dest_sector_idx) {
     parent_dir_info.subdirectory_count--;
     // 写出原父目录
     update_checksum(&parent_dir_info);
-    memcpy(fs_buffer, &parent_dir_info, 512);
+    memcpy(fs_buffer, &parent_dir_info, sizeof(DirectoryInfo));
     write_sector(parent_dir_info.sector_idx);
 
 
     // 获取新的父目录
     read_sector(dest_sector_idx);
-    memcpy(fs_buffer, &parent_dir_info, 512);
+    memcpy(fs_buffer, &parent_dir_info, sizeof(DirectoryInfo));
     // 从现在开始parent_dir_info是新的父目录
 
     src_dir_info.parentDirectory_sector_idx = parent_dir_info.sector_idx;
@@ -530,7 +534,10 @@ bool move_directory(uint32_t src_sector_idx, uint32_t dest_sector_idx) {
 
         // 这里需要记录下头结点
         read_sector(parent_dir_info.subdirectory_sector_idx);
-        memcpy(&sibling_dir_info, fs_buffer, 512);
+        memcpy(&sibling_dir_info, fs_buffer, sizeof(DirectoryInfo));
+
+        // 先记录下尾结点的扇区索引，不然修改之后就丢失了
+        uint32_t tail_node_sector_idx = sibling_dir_info.prevSiblingDirectory_sector_idx;
 
         // 然后就是双向链表标准流程了（头结点）
         sibling_dir_info.prevSiblingDirectory_sector_idx = src_dir_info.sector_idx;       // 头结点的prev指向新加入的结点
@@ -538,19 +545,19 @@ bool move_directory(uint32_t src_sector_idx, uint32_t dest_sector_idx) {
 
         // 更新头结点校验和，写出到外存
         update_checksum(&sibling_dir_info);
-        memcpy(fs_buffer, &sibling_dir_info, 512);
+        memcpy(fs_buffer, &sibling_dir_info, sizeof(DirectoryInfo));
         write_sector(sibling_dir_info.sector_idx);
 
         // 读最后一个结点（尾结点），此时内存中sibling_dir_info还是头结点的值
-        read_sector(sibling_dir_info.prevSiblingDirectory_sector_idx);
-        memcpy(&sibling_dir_info, fs_buffer, 512);
+        read_sector(tail_node_sector_idx);
+        memcpy(&sibling_dir_info, fs_buffer, sizeof(DirectoryInfo));
         // 此时sibling_dir_info是尾结点tail
         sibling_dir_info.nextSiblingDirectory_sector_idx = src_dir_info.sector_idx;       // 原先tail的next指向新结点
         src_dir_info.prevSiblingDirectory_sector_idx = sibling_dir_info.sector_idx;       // 新结点的prev指向原先的tail
 
         // 更新尾结点校验和，写出到外存
         update_checksum(&src_dir_info);
-        memcpy(fs_buffer, &src_dir_info, 512);
+        memcpy(fs_buffer, &src_dir_info, sizeof(DirectoryInfo));
         write_sector(src_dir_info.sector_idx);
     }
 
@@ -559,12 +566,12 @@ bool move_directory(uint32_t src_sector_idx, uint32_t dest_sector_idx) {
     // 更新父目录校验和
     update_checksum(&parent_dir_info);
     // 写出父目录
-    memcpy(fs_buffer, &parent_dir_info, 512);
+    memcpy(fs_buffer, &parent_dir_info, sizeof(DirectoryInfo));
     write_sector(parent_dir_info.sector_idx);
 
     // 更新当前目录的校验和，写出这个新目录到新分配的扇区
     update_checksum(&src_dir_info);
-    memcpy(fs_buffer, &src_dir_info, 512);
+    memcpy(fs_buffer, &src_dir_info, sizeof(DirectoryInfo));
     write_sector(src_dir_info.sector_idx);
 
     return true;
@@ -683,20 +690,20 @@ bool delete_directory(uint32_t sector_idx) {
 
         // 取前兄弟结点，它的next直接接当前目录的next
         read_sector(prevSiblingDirectory_sector_idx);
-        memcpy(&sibling_dir_info, fs_buffer, 512);
+        memcpy(&sibling_dir_info, fs_buffer, sizeof(DirectoryInfo));
         sibling_dir_info.nextSiblingDirectory_sector_idx = nextSiblingDirectory_sector_idx;
         // 写出前兄弟结点到外存
         update_checksum(&sibling_dir_info);
-        memcpy(fs_buffer, &sibling_dir_info, 512);
+        memcpy(fs_buffer, &sibling_dir_info, sizeof(DirectoryInfo));
         write_sector(sibling_dir_info.sector_idx);
 
         // 取后兄弟结点，它的prev直接接当前目录的prev
         read_sector(nextSiblingDirectory_sector_idx);
-        memcpy(&sibling_dir_info, fs_buffer, 512);
+        memcpy(&sibling_dir_info, fs_buffer, sizeof(DirectoryInfo));
         sibling_dir_info.prevSiblingDirectory_sector_idx = prevSiblingDirectory_sector_idx;
         // 写出后兄弟结点到外存
         update_checksum(&sibling_dir_info);
-        memcpy(fs_buffer, &sibling_dir_info, 512);
+        memcpy(fs_buffer, &sibling_dir_info, sizeof(DirectoryInfo));
         write_sector(sibling_dir_info.sector_idx);
 
         if(parent_dir_info.subdirectory_sector_idx == sector_idx) {
@@ -710,7 +717,7 @@ bool delete_directory(uint32_t sector_idx) {
     parent_dir_info.subdirectory_count--;
     // 写出原父目录
     update_checksum(&parent_dir_info);
-    memcpy(fs_buffer, &parent_dir_info, 512);
+    memcpy(fs_buffer, &parent_dir_info, sizeof(DirectoryInfo));
     write_sector(parent_dir_info.sector_idx);
 
     return true;
