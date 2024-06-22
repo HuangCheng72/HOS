@@ -324,8 +324,32 @@ bool create_directory(const char *name, uint32_t parent_sector_idx, uint32_t fil
         return false;
     }
     // file_metadata_sector_idx不是0必须校验
-    if (file_metadata_sector_idx > 0 && is_valid_fileMetaInfo(file_metadata_sector_idx)) {
+    if (file_metadata_sector_idx > 0 && !is_valid_fileMetaInfo(file_metadata_sector_idx)) {
         return false;
+    }
+
+    // 把父目录信息从缓冲区保存到临时变量，等下要用到
+    read_sector(parent_sector_idx);
+    DirectoryInfo parent_dir;
+    memcpy(&parent_dir, fs_buffer, sizeof(DirectoryInfo));
+
+    // 这里还应该加一套保护措施
+    // 如果发现已有就返回true
+    // 意为不用创建
+    uint32_t tempidx = parent_dir.subdirectory_sector_idx;
+    for(uint32_t i = 0; i < parent_dir.subdirectory_count; i++) {
+        // 检查每一个兄弟目录
+        if(is_valid_directory(tempidx)) {
+            read_sector(tempidx);
+            if( strcmp(((DirectoryInfo*)fs_buffer)->directoryName, name) == 0) {
+                // 已有，不用创建
+                return true;
+            }
+            tempidx = ((DirectoryInfo*)fs_buffer)->nextSiblingDirectory_sector_idx;
+        } else {
+            // 如果不过关的话，直接不检查了，这也不懂怎么回事
+            break;
+        }
     }
 
     // 申请一个新扇区
@@ -363,12 +387,6 @@ bool create_directory(const char *name, uint32_t parent_sector_idx, uint32_t fil
     // 2. 如果父目录没有子目录（子目录扇区索引为0），则将这个目录作为父目录的子目录扇区索引
     // 3. 如果父目录有子目录索引，则将父目录保存的子目录索引视为双向链表的头结点（只不过这个头结点还保存信息，注意！！），把当前结点插入到这个链表中！
     // 4. 因此还要更新父目录保存的那个作为头结点的子目录的值
-
-    // 更新父目录信息
-    // 把父目录信息从缓冲区保存到临时变量，等下要用到
-    read_sector(parent_sector_idx);
-    DirectoryInfo parent_dir;
-    memcpy(&parent_dir, fs_buffer, sizeof(DirectoryInfo));
 
     if (parent_dir.subdirectory_sector_idx == 0) {
         // 父目录没有子目录，直接将新目录设置为父目录保存的子目录结点
@@ -518,7 +536,7 @@ bool move_directory(uint32_t src_sector_idx, uint32_t dest_sector_idx) {
 
     // 获取新的父目录
     read_sector(dest_sector_idx);
-    memcpy(fs_buffer, &parent_dir_info, sizeof(DirectoryInfo));
+    memcpy(&parent_dir_info, fs_buffer, sizeof(DirectoryInfo));
     // 从现在开始parent_dir_info是新的父目录
 
     src_dir_info.parentDirectory_sector_idx = parent_dir_info.sector_idx;
