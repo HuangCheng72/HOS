@@ -71,10 +71,13 @@ int16_t fs_open(FS_DESC *pdesc, char* pname) {
         if (create_directory(pname, SBlk->root_dir_sector, 0) == false) {
             return -2; // 创建目录失败
         }
+        // 再次查找目录信息
+        dir_sector = find_directory(pname, SBlk->root_dir_sector);
+        if(dir_sector == 0) {
+            // 理论上来说这绝不可能，如果真的出现，说明文件系统坏了
+            return -3;
+        }
     }
-
-    // 再次查找
-    dir_sector = find_directory(pname, SBlk->root_dir_sector);
 
     // 读取目录信息
     DirectoryInfo dir_info;
