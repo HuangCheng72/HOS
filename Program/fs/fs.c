@@ -62,20 +62,57 @@ int16_t fs_format(uint8_t fmode) {
 
 // 打开文件
 int16_t fs_open(FS_DESC *pdesc, char* pname) {
-    // 查找目录信息
-    uint32_t dir_sector = find_directory(pname, SBlk->root_dir_sector);
-    // 如果没找到的话就创建新的
-    if (dir_sector == 0) {
-        // 创建新文件
-        // 现在还没想好怎么解决目录路径的问题，直接全部建立在根目录下
-        if (create_directory(pname, SBlk->root_dir_sector, 0) == false) {
-            return -2; // 创建目录失败
-        }
-        // 再次查找目录信息
-        dir_sector = find_directory(pname, SBlk->root_dir_sector);
-        if(dir_sector == 0) {
-            // 理论上来说这绝不可能，如果真的出现，说明文件系统坏了
-            return -3;
+    if(strlen(pname) == 0) {
+        return -1;
+    }
+    if(pname[0] != '/') {
+        // 路径必须是/开头的绝对路径
+        return -1;
+    }
+    // 解析路径
+    char dir_name[FS_FILENAME_MAX_LEN + 1] = { 0 };
+    // 因为第一个字符肯定是/，所以从第二个字符开始扫
+    uint32_t idx_start = 0, idx_end = 1 , len = strlen(pname);
+
+    // 起点是root目录
+    uint32_t parentDirSector = SBlk->root_dir_sector;
+    // 记录当前的目录扇区
+    uint32_t dir_sector;
+
+    // 路径约定格式，类似于Linux
+    // /home/username/123.txt
+
+    // 双指针法解析目录
+    for(; idx_end <= len; idx_end++) {
+        if(pname[idx_end] == '/' || pname[idx_end] == '\0') {
+            if(idx_end - idx_start < 2) {
+                // 处理连续的/
+                continue;
+            }
+
+            memset(dir_name, 0, FS_FILENAME_MAX_LEN + 1);
+            // 如果是/a/这种的，start = 0，end = 2，复制从a开始，复制一个字符
+            // 因为之前清零了，所以不需要加上\0
+            memcpy(dir_name, pname + idx_start + 1, idx_end - idx_start - 1);
+
+            dir_sector = find_directory(dir_name, parentDirSector);
+
+            if(dir_sector == 0) {
+                // 创建新目录
+                if (create_directory(dir_name, parentDirSector, 0) == false) {
+                    return -2; // 创建目录失败
+                }
+                // 再次查找目录信息
+                dir_sector = find_directory(dir_name, parentDirSector);
+                if(dir_sector == 0) {
+                    // 理论上来说这绝不可能，如果真的出现，说明文件系统坏了
+                    return -3;
+                }
+            }
+            // 无论如何都要更换父结点
+            parentDirSector = dir_sector;
+            // 更新指针
+            idx_start = idx_end;
         }
     }
 
@@ -160,6 +197,72 @@ int16_t fs_rewind(FS_DESC *pdesc) {
     pdesc->file_pos = 0;
 
     return 0;
+}
+
+// 移动文件（理论上来说没目录不行，我把这个改成了可以一路创建了）
+int16_t fs_move(FS_DESC *pdesc, char* pname) {
+    if(strlen(pname) == 0) {
+        return -1;
+    }
+    if(pname[0] != '/') {
+        // 路径必须是/开头的绝对路径
+        return -1;
+    }
+    // 解析路径
+    char dir_name[FS_FILENAME_MAX_LEN + 1] = { 0 };
+    // 因为第一个字符肯定是/，所以从第二个字符开始扫
+    uint32_t idx_start = 0, idx_end = 1 , len = strlen(pname);
+
+    // 起点是root目录
+    uint32_t parentDirSector = SBlk->root_dir_sector;
+    // 记录当前的目录扇区
+    uint32_t dir_sector;
+
+    // 路径约定格式，类似于Linux
+    // /home/username/123.txt
+
+    // 双指针法解析目录
+    for(; idx_end <= len; idx_end++) {
+        if(pname[idx_end] == '/' || pname[idx_end] == '\0') {
+            if(idx_end - idx_start < 2) {
+                // 处理连续的/
+                continue;
+            }
+
+            memset(dir_name, 0, FS_FILENAME_MAX_LEN + 1);
+            // 如果是/a/这种的，start = 0，end = 2，复制从a开始，复制一个字符
+            // 因为之前清零了，所以不需要加上\0
+            memcpy(dir_name, pname + idx_start + 1, idx_end - idx_start - 1);
+
+            dir_sector = find_directory(dir_name, parentDirSector);
+
+            if(dir_sector == 0) {
+                // 创建新目录
+                if (create_directory(dir_name, parentDirSector, 0) == false) {
+                    return -2; // 创建目录失败
+                }
+                // 再次查找目录信息
+                dir_sector = find_directory(dir_name, parentDirSector);
+                if(dir_sector == 0) {
+                    // 理论上来说这绝不可能，如果真的出现，说明文件系统坏了
+                    return -3;
+                }
+            }
+            // 无论如何都要更换父结点
+            parentDirSector = dir_sector;
+            // 更新指针
+            idx_start = idx_end;
+        }
+    }
+
+    // 读取目录信息
+    bool res = move_directory(pdesc->dir_sector_idx, dir_sector);
+
+    if(res) {
+        return 0;
+    }
+
+    return -1;
 }
 
 // 删除文件

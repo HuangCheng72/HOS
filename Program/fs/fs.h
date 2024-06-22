@@ -92,6 +92,8 @@ int16_t fs_close(FS_DESC *pdesc);
 int32_t fs_read(FS_DESC *pdesc, uint8_t *pdest, uint32_t anz);
 // 写入文件
 int16_t fs_write(FS_DESC *pdesc, uint8_t *pdata, uint32_t len);
+// 移动文件
+int16_t fs_move(FS_DESC *pdesc, char* pname);
 // 删除文件
 int16_t fs_delete(FS_DESC *pdesc);
 // 重命名文件
