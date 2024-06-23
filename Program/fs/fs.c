@@ -95,7 +95,8 @@ int16_t fs_open(FS_DESC *pdesc, char* pname) {
             // 因为之前清零了，所以不需要加上\0
             memcpy(dir_name, pname + idx_start + 1, idx_end - idx_start - 1);
 
-            dir_sector = find_directory(dir_name, parentDirSector);
+            // 其实只用到查子目录一级就行了，只要父目录下没有同名子目录就行
+            dir_sector = find_subdirectory(dir_name, parentDirSector);
 
             if(dir_sector == 0) {
                 // 创建新目录
@@ -103,7 +104,7 @@ int16_t fs_open(FS_DESC *pdesc, char* pname) {
                     return -2; // 创建目录失败
                 }
                 // 再次查找目录信息
-                dir_sector = find_directory(dir_name, parentDirSector);
+                dir_sector = find_subdirectory(dir_name, parentDirSector);
                 if(dir_sector == 0) {
                     // 理论上来说这绝不可能，如果真的出现，说明文件系统坏了
                     return -3;
@@ -234,7 +235,8 @@ int16_t fs_move(FS_DESC *pdesc, char* pname) {
             // 因为之前清零了，所以不需要加上\0
             memcpy(dir_name, pname + idx_start + 1, idx_end - idx_start - 1);
 
-            dir_sector = find_directory(dir_name, parentDirSector);
+            // 其实只用到查子目录一级就行了，只要父目录下没有同名子目录就行
+            dir_sector = find_subdirectory(dir_name, parentDirSector);
 
             if(dir_sector == 0) {
                 // 创建新目录
@@ -242,7 +244,7 @@ int16_t fs_move(FS_DESC *pdesc, char* pname) {
                     return -2; // 创建目录失败
                 }
                 // 再次查找目录信息
-                dir_sector = find_directory(dir_name, parentDirSector);
+                dir_sector = find_subdirectory(dir_name, parentDirSector);
                 if(dir_sector == 0) {
                     // 理论上来说这绝不可能，如果真的出现，说明文件系统坏了
                     return -3;
@@ -253,6 +255,13 @@ int16_t fs_move(FS_DESC *pdesc, char* pname) {
             // 更新指针
             idx_start = idx_end;
         }
+    }
+
+    // 保护逻辑，目标目录下是否已有同名文件
+    read_sector(pdesc->dir_sector_idx);
+    if(find_subdirectory(((DirectoryInfo*)fs_buffer)->directoryName, dir_sector) != 0) {
+        // 目标目录下已有同名文件，不得移动
+        return -4;
     }
 
     // 读取目录信息

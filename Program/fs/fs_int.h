@@ -104,6 +104,8 @@ void write_superblock();
 bool is_valid_directory(uint32_t sector_idx);
 // 查找目录（查找起点目录包括所有子目录，因此要递归查找），得到结果是符合要求的目录索引
 uint32_t find_directory(const char* name, uint32_t sector_idx);
+// 只查给定目录的子目录这一层级，不递归，得到结果是符合要求的目录索引
+uint32_t find_subdirectory(const char* name, uint32_t sector_idx);
 // 创建根目录，只能使用一次（在初始化文件系统的时候使用）
 bool create_root_directory();
 // 创建目录（如果是一个文件的话，file_metadata_sector_idx不得为0），返回操作是否成功

@@ -271,6 +271,41 @@ uint32_t find_directory(const char* name, uint32_t sector_idx) {
     return 0;
 }
 
+// 只查给定目录的子目录这一层级，不递归，得到结果是符合要求的目录索引
+uint32_t find_subdirectory(const char* name, uint32_t sector_idx) {
+    if (!is_valid_directory(sector_idx)) {
+        // 都不是一个有效的目录，直接返回0
+        return 0;
+    }
+    read_sector(sector_idx);
+    // 父目录所保存的子目录结点
+    uint32_t current_sector_idx = ((DirectoryInfo*)fs_buffer)->subdirectory_sector_idx;
+    // 父目录保存了子目录的数量，可以通过这个写一个for循环
+    // 防止while循环造成的无限循环问题（因为每个新目录都设了自环）
+    uint32_t subdirectory_count = ((DirectoryInfo*)fs_buffer)->subdirectory_count;
+
+    for(uint32_t i = 0; i < subdirectory_count; i++) {
+        // 首先检查当前结点是否有效
+        if(is_valid_directory(current_sector_idx)) {
+            // 更换结点
+            read_sector(current_sector_idx);
+            // 检查当前目录是否匹配（起点目录本身，因为父目录保存的子目录索引是有信息的）
+            // 重读扇区之后，fs_buffer中的值也会变动
+            if (strcmp(((DirectoryInfo*)fs_buffer)->directoryName, name) == 0) {
+                return current_sector_idx;
+            }
+            // 取后兄弟
+            current_sector_idx = ((DirectoryInfo*)fs_buffer)->nextSiblingDirectory_sector_idx;
+        } else {
+            // 照道理来说不该有这种情况，但是有了没办法，只能退出循环了
+            break;
+        }
+    }
+
+    // 返回0就意味着没成功，因为扇区0是超级块，很容易判断出来
+    return 0;
+}
+
 // 创建根目录，只能使用一次（在初始化文件系统的时候使用）
 bool create_root_directory() {
     // 申请一个新扇区
@@ -328,30 +363,6 @@ bool create_directory(const char *name, uint32_t parent_sector_idx, uint32_t fil
         return false;
     }
 
-    // 把父目录信息从缓冲区保存到临时变量，等下要用到
-    read_sector(parent_sector_idx);
-    DirectoryInfo parent_dir;
-    memcpy(&parent_dir, fs_buffer, sizeof(DirectoryInfo));
-
-    // 这里还应该加一套保护措施
-    // 如果发现已有就返回true
-    // 意为不用创建
-    uint32_t tempidx = parent_dir.subdirectory_sector_idx;
-    for(uint32_t i = 0; i < parent_dir.subdirectory_count; i++) {
-        // 检查每一个兄弟目录
-        if(is_valid_directory(tempidx)) {
-            read_sector(tempidx);
-            if( strcmp(((DirectoryInfo*)fs_buffer)->directoryName, name) == 0) {
-                // 已有，不用创建
-                return true;
-            }
-            tempidx = ((DirectoryInfo*)fs_buffer)->nextSiblingDirectory_sector_idx;
-        } else {
-            // 如果不过关的话，直接不检查了，这也不懂怎么回事
-            break;
-        }
-    }
-
     // 申请一个新扇区
     uint32_t new_dir_sector_idx = acquire_directory_sector();
 
@@ -381,6 +392,11 @@ bool create_directory(const char *name, uint32_t parent_sector_idx, uint32_t fil
     // 子目录也是0，新目录哪来的子目录
     new_dir.subdirectory_count = 0;
     new_dir.subdirectory_sector_idx = 0;
+
+    // 把父目录信息从缓冲区保存到临时变量，等下要用到
+    read_sector(parent_sector_idx);
+    DirectoryInfo parent_dir;
+    memcpy(&parent_dir, fs_buffer, sizeof(DirectoryInfo));
 
     //接下来的操作
     // 1. 更新父目录的子目录计数器
