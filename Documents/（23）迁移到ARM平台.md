@@ -444,6 +444,10 @@ pause
 
 编译，连接，把kernel.bin放到L盘里面，然后卸载L盘，不然qemu用不了。
 
+![](./pic/55.png)
+
+
+
 ## 4. 实际使用
 
 在VM文件夹下建立start_qemu_arm.bat，内容如下：
