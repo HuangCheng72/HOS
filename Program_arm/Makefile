@@ -48,8 +48,8 @@ compile:
 
 # 链接生成 kernel.elf
 link:
-	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(wildcard $(KERNEL_DIR)/*.o) \
-										$(wildcard $(BOOT_DIR)/*.o)
+	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(wildcard $(BOOT_DIR)/*.o) \
+										$(wildcard $(KERNEL_DIR)/*.o)
 #										$(wildcard $(LIB_DIR)/*.o) \
 #										$(wildcard $(DEVICE_DIR)/*.o) \
 #										$(wildcard $(USER_DIR)/*.o) \
