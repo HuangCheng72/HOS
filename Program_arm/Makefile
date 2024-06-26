@@ -40,7 +40,7 @@ all: compile link bin
 # 编译各组件
 compile:
 	$(MAKE) -C $(BOOT_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
-#	$(MAKE) -C $(LIB_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+	$(MAKE) -C $(LIB_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(KERNEL_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 #	$(MAKE) -C $(DEVICE_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 #	$(MAKE) -C $(USER_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
@@ -49,8 +49,8 @@ compile:
 # 链接生成 kernel.elf
 link:
 	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(wildcard $(BOOT_DIR)/*.o) \
-										$(wildcard $(KERNEL_DIR)/*.o)
-#										$(wildcard $(LIB_DIR)/*.o) \
+										$(wildcard $(KERNEL_DIR)/*.o) \
+										$(wildcard $(LIB_DIR)/*.o)
 #										$(wildcard $(DEVICE_DIR)/*.o) \
 #										$(wildcard $(USER_DIR)/*.o) \
 #										$(wildcard $(FS_DIR)/*.o)
