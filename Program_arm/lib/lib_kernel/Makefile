@@ -21,7 +21,7 @@ all: $(OBJS) print.o string.o bitmap.o list.o
 	$(AS) $(ASM_FLAGS) $(LIB_DIR)/$@ $<
 
 print.o:
-	$(MAKE) -C $(PRINT_DIR) GCC=$(GCC) AS=$(AS) MAKE=($MAKE)
+	$(MAKE) -C $(PRINT_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 
 string.o:
 	$(MAKE) -C $(STRING_DIR) GCC=$(GCC) AS=$(AS)
