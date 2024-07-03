@@ -19,8 +19,7 @@
 load_page_directory:
     // 设置TTBR0
     mcr p15, 0, r0, c2, c0, 0    // 设置TTBR0，r0包含页表基地址
-    // 设置TTBR1
-    mcr p15, 0, r0, c2, c0, 1    // 设置TTBR1，r0包含页表基地址
+    // 配合只使用TTBR0，所以就不要加载到TTBR1了
 
     bx lr                        // 返回调用者
 

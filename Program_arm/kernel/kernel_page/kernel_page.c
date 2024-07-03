@@ -75,14 +75,14 @@ void init_paging() {
     DACR_t dacr;
     memset(&dacr, 0, sizeof(DACR_t));
     dacr.domain0 = 1;   // 内核域允许必须是由页表条目控制访问权
-    dacr.domain15 = 3;  // 用户域可以不检查访问权（不知道为什么一检查就不能访问了，AP全部3也不行）
+    dacr.domain15 = 3;  // 用户域可以不检查访问权
     set_dacr(&dacr);
 
-    // 设置TTBCR寄存器，使用TTBR0和TTBR1
+    // 设置TTBCR寄存器，只使用TTBR0，类似于x86的cr3，兼容先前的ARMv5和ARMv6架构
     TTBCR_t ttbcr;
     // 取当前TTBCR值
     get_ttbcr(&ttbcr);
-    ttbcr.N = 1;
+    ttbcr.N = 0;
     ttbcr.Reserved0 = 0;
     ttbcr.PD0 = 0;
     ttbcr.PD1 = 0;
