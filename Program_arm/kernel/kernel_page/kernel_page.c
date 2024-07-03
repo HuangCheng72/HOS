@@ -74,8 +74,11 @@ void init_paging() {
     // 域控制器设置
     DACR_t dacr;
     memset(&dacr, 0, sizeof(DACR_t));
-    dacr.domain0 = 1;   // 内核域允许必须是由页表条目控制访问权
-    dacr.domain15 = 3;  // 用户域可以不检查访问权
+    // 实测，一旦开启权限检查
+    // 用粗页表和小页表的二级映射体系直接无法写，只能读
+    // 为了避免权限问题，只能一律全权
+    dacr.domain0 = 3;
+    dacr.domain15 = 3;
     set_dacr(&dacr);
 
     // 设置TTBCR寄存器，只使用TTBR0，类似于x86的cr3，兼容先前的ARMv5和ARMv6架构
