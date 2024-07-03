@@ -8,85 +8,50 @@
 
 void setup_page_directory() {
 
-    page_directory_entry_t *page_directory = (page_directory_entry_t *)(PAGE_DIR_TABLE_POS + DRAM_OFFSET);
+    SectionDescriptor *page_directory = (SectionDescriptor *)(PAGE_DIR_TABLE_POS + DRAM_OFFSET);
 
     // 清空整个页目录表（4096条，要16KB）
     memset(page_directory, 0, 0x4000);
 
-    // 一级页表用粗页表，二级页表用小页表
-    // 因为0x9000000处是uart的映射，这里也需要做一对一映射
-
-    // 4个页表放低端4MB映射
-    page_table_entry_t* first_page_table = (page_table_entry_t*)(PAGE_DIR_TABLE_POS + DRAM_OFFSET + 0x4000);
-
-    // 4MB就是0x00400000，则是0x400页，这么多个描述符
-    for(uint32_t i = 0; i < 0x400; i++) {
-        first_page_table[i].PageType = 2;
-        first_page_table[i].Bufferable = 1;
-        first_page_table[i].Cacheable = 1;
-        // 低端的访问权应当是全权，不然用户怎么操作
-        first_page_table[i].AccessPermission0 = 3;
-        first_page_table[i].AccessPermission1 = 3;
-        first_page_table[i].AccessPermission2 = 3;
-        first_page_table[i].AccessPermission3 = 3;
-        first_page_table[i].BaseAddress = ((DRAM_OFFSET + i * 0x1000) >> 12);
-    }
-
-    // 把四条一级页表赋值了
-    // 256个二级页表是1024字节，也就是0x400
-    // 低端一对一映射（DRAM地址从0x40000000开始）
+    // 低端一对一映射（DRAM地址从0x40000000开始，不仅是内存，还有uart，还有可能的其他组件，因此全部用段描述符映射）
     // 0x40000000 / 0x100000 = 0x400
-    for(uint32_t i = 0; i < 4; i++) {
-        page_directory[i + 0x400].DescriptorType = 1;
-        page_directory[i + 0x400].ShouldBeZero = 0;
-        page_directory[i + 0x400].Domain = USER_DOMAIN;
-        page_directory[i + 0x400].ImplementationDefined = 0;
-        page_directory[i + 0x400].BaseAddress = (((uint32_t)(first_page_table) + i * 0x400) >> 10);
+    // 0x48000000 / 0x100000 = 0x480
+    for(uint32_t i = 0; i < 0x480; i++) {
+        page_directory[i].DescriptorType = 2;
+        page_directory[i].Bufferable = 1;
+        page_directory[i].Cacheable = 1;
+        page_directory[i].ShouldBeZero0 = 0;
+        page_directory[i].Domain = USER_DOMAIN;
+        page_directory[i].ImplementationDefined = 0;
+        page_directory[i].AccessPermission = 3; // 用户域不检查，但还是以防万一
+        page_directory[i].TypeExtension = 0;
+        page_directory[i].ShouldBeZero1 = 0;
+        page_directory[i].Shared = 0;
+        page_directory[i].ShouldBeZero2 = 0;
+        page_directory[i].PresentHigh = 0;
+        page_directory[i].ShouldBeZero3 = 0;
+        // page_directory[i].BaseAddress = ((i * 0x100000) >> 20);
+        // 简化为：
+        page_directory[i].BaseAddress = i;
     }
 
 
     // 1条页表放高端1MB映射
-    page_table_entry_t* second_page_table = (page_table_entry_t*)(PAGE_DIR_TABLE_POS + DRAM_OFFSET + 0x4000 + 0x400 * sizeof(page_table_entry_t));
-
-    // 1MB就是0x00100000，则是0x100页
-    for(uint32_t i = 0; i < 0x100; i++) {
-        second_page_table[i].PageType = 2;
-        second_page_table[i].Bufferable = 1;
-        second_page_table[i].Cacheable = 1;
-        // 高端的访问权应当是特权读写、用户只读，所以用2合适
-        second_page_table[i].AccessPermission0 = 2;
-        second_page_table[i].AccessPermission1 = 2;
-        second_page_table[i].AccessPermission2 = 2;
-        second_page_table[i].AccessPermission3 = 2;
-        second_page_table[i].BaseAddress = ((DRAM_OFFSET + i * 0x1000) >> 12);
-    }
-
     // 从0xc0000000开始
-    page_directory[0xc00].DescriptorType = 1;
-    page_directory[0xc00].ShouldBeZero = 0;
+    page_directory[0xc00].DescriptorType = 2;
+    page_directory[0xc00].Bufferable = 1;
+    page_directory[0xc00].Cacheable = 1;
+    page_directory[0xc00].ShouldBeZero0 = 0;
     page_directory[0xc00].Domain = KERNEL_DOMAIN;
     page_directory[0xc00].ImplementationDefined = 0;
-    page_directory[0xc00].BaseAddress = ((uint32_t)(second_page_table) >> 10);
-
-
-    // 0x09000000处放一对一映射一页，要不然没法用串口输出
-    page_table_entry_t* third_page_table = (page_table_entry_t*)(PAGE_DIR_TABLE_POS + DRAM_OFFSET + 0x4000 + 0x500 * sizeof(page_table_entry_t));
-
-    third_page_table->PageType = 2;
-    third_page_table->Bufferable = 1;
-    third_page_table->Cacheable = 1;
-    // 这里的访问权肯定要全开
-    third_page_table->AccessPermission0 = 3;
-    third_page_table->AccessPermission1 = 3;
-    third_page_table->AccessPermission2 = 3;
-    third_page_table->AccessPermission3 = 3;
-    third_page_table->BaseAddress = (0x09000000 >> 12);
-
-    page_directory[0x90].DescriptorType = 1;
-    page_directory[0x90].ShouldBeZero = 0;
-    page_directory[0x90].Domain = USER_DOMAIN;
-    page_directory[0x90].ImplementationDefined = 0;
-    page_directory[0x90].BaseAddress = (((uint32_t)third_page_table) >> 10);
+    page_directory[0xc00].AccessPermission = 2;     // 当然要特权读写用户只读
+    page_directory[0xc00].TypeExtension = 0;
+    page_directory[0xc00].ShouldBeZero1 = 0;
+    page_directory[0xc00].Shared = 0;
+    page_directory[0xc00].ShouldBeZero2 = 0;
+    page_directory[0xc00].PresentHigh = 0;
+    page_directory[0xc00].ShouldBeZero3 = 0;
+    page_directory[0xc00].BaseAddress = (DRAM_OFFSET >> 20);
 
     // ramdisk暂时不管，用到了再说
 }

@@ -6,20 +6,17 @@
 #include "kernel_page/kernel_page.h"
 
 void kernel_main(void) {
-    // 切换栈指针
-    switch_sp(0x40007000);
-
-    // 测试分页后能不能用
-    *((uint32_t *)0x40004000) = 0x1234;
-    put_int(*((uint32_t *)0x40004000));
-    put_char('\n');
+    // u-boot已经给我们设置了管理模式
+    // 一进来就已经是管理模式了
 
     // 页表初始化
     init_paging();
 
-    // 查看是否分页成功
-    put_int(*((uint32_t *)0xc0004000));
-    put_char('\n');
+    // 因为覆盖了整个内存区域，所以还可以用u-boot的栈
+    // 到这里再切换也没问题
+
+    // 切换栈指针到虚拟地址，这样就可以顺利使用内核栈了
+    switch_sp(0xc0007000);
 
     for(;;);
 }

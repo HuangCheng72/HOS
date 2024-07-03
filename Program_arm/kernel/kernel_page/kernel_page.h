@@ -103,17 +103,6 @@ extern void get_dacr(DACR_t *dacr);
 // 从结构体中读取并设置DACR寄存器的值，paging_ops.asm
 extern void set_dacr(DACR_t *dacr);
 
-// 还用页目录表这个名字，知道是一级页表就行了，反正x86也是没页目录表这个说法，只是约定俗成
-
-// 一级页表用粗页表
-typedef struct {
-    uint32_t DescriptorType :2;            // 位0-1: 描述符类型，段描述符为1（二进制为01）
-    uint32_t ShouldBeZero : 3;             // 位2-4: 必须为零
-    uint32_t Domain : 4;                   // 位5-8: 域，用作内存保护机制，16个可能的域
-    uint32_t ImplementationDefined : 1;    // 位9: 实现定义
-    uint32_t BaseAddress : 22;             // 位10-31: 页表基地址，必须1KB对齐（地址右移10位）
-} page_directory_entry_t;
-
 // ARM 二级页表（分大页、小页、细页三种，大页64KB，小页4KB，细页1KB，细页现在基本上不用了）
 
 // 大页，64KB
@@ -141,18 +130,6 @@ typedef struct {
     uint32_t AccessPermission3 : 2;            // 位10-11: 从上类推
     uint32_t BaseAddress : 20;                 // 位12-31: 小页基地址，必须4KB对齐（地址右移12位）
 } SmallPageDescriptor;
-
-// 二级页表用小页
-typedef struct {
-    uint32_t PageType : 2;                     // 位0-1: 页类型，小页为2（二进制为10）
-    uint32_t Bufferable : 1;                   // 位2: 缓冲位
-    uint32_t Cacheable : 1;                    // 位3: 缓存位
-    uint32_t AccessPermission0 : 2;            // 位4-5: 第一个1KB的访问权限，以此类推
-    uint32_t AccessPermission1 : 2;            // 位6-8: 从上类推
-    uint32_t AccessPermission2 : 2;            // 位9-10: 从上类推
-    uint32_t AccessPermission3 : 2;            // 位10-11: 从上类推
-    uint32_t BaseAddress : 20;                 // 位12-31: 小页基地址，必须4KB对齐（地址右移12位）
-} page_table_entry_t;
 
 // #define PAGE_DIR_TABLE_POS 0x100000  // 页目录表的起始物理地址
 // 因为virt的DRAM映射范围是0x40000000到0x47ffffff，要加上偏移量0x40000000才行
