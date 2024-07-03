@@ -10,7 +10,7 @@
 // 这部分所有内容都来自arm官网文档，网址如下
 // https://developer.arm.com/documentation/ddi0406/b/Appendices/ARMv4-and-ARMv5-Differences/System-level-memory-model/Virtual-memory-support?lang=en
 // https://developer.arm.com/documentation/ddi0601/2024-03/AArch32-Registers/TTBCR--Translation-Table-Base-Control-Register?lang=en
-// https://developer.arm.com/documentation/ddi0601/2024-03/AArch32-Registers/SCTLR--System-Control-Register?lang=en
+// https://developer.arm.com/documentation/ddi0406/b/Appendices/ARMv4-and-ARMv5-Differences/System-Control-coprocessor--CP15--support/c1--System-control-register-support?lang=en#CHDHBEDB
 
 // 在 ARMv7 架构的页表描述符中，描述符类型是用两位来表示的，可以有四种类型。
 // 以下是描述符类型及其含义：
@@ -168,36 +168,21 @@ extern void set_ttbcr(TTBCR_t *ttbcr);
 
 // 定义SCTLR寄存器的结构体
 typedef struct {
-    uint32_t M              : 1;   // 位0: MMU使能 (MMU enable for EL1 and EL0 stage 1 address translation)
-    uint32_t A              : 1;   // 位1: 对齐检查使能 (Alignment check enable)
-    uint32_t C              : 1;   // 位2: 数据访问的可缓存性控制 (Cacheability control for data accesses at EL1 and EL0)
-    uint32_t nTLSMD         : 1;   // 位3: 不捕获加载/存储多个到设备内存的指令 (No Trap Load Multiple and Store Multiple to Device-nGRE/Device-nGnRE/Device-nGnRnE memory)
-    uint32_t LSMAOE         : 1;   // 位4: 加载/存储多个的原子性和排序使能 (Load Multiple and Store Multiple Atomicity and Ordering Enable)
-    uint32_t CP15BEN        : 1;   // 位5: 系统指令内存屏障使能 (System instruction memory barrier enable)
-    uint32_t UNK            : 1;   // 位6: 未知 (Unknown, writes ignored, reads return unknown value)
-    uint32_t ITD            : 1;   // 位7: IT指令禁用 (IT Disable)
-    uint32_t SED            : 1;   // 位8: SETEND指令禁用 (SETEND instruction disable)
-    uint32_t Reserved0      : 1;   // 位9: 保留，必须为0 (Reserved, RES0)
-    uint32_t EnRCTX         : 1;   // 位10: 使能EL0访问特定系统指令 (Enable EL0 access to specific System instructions)
-    uint32_t Reserved1      : 1;   // 位11: 保留，必须为1 (Reserved, RES1)
-    uint32_t I              : 1;   // 位12: 指令访问的可缓存性控制 (Instruction access Cacheability control)
-    uint32_t V              : 1;   // 位13: 矢量位 (Vectors bit, selects base address of the exception vectors)
-    uint32_t Reserved2      : 2;   // 位14-15: 保留，必须为0 (Reserved, RES0)
-    uint32_t nTWI           : 1;   // 位16: 捕获EL0执行的WFI指令 (Traps EL0 execution of WFI instructions)
-    uint32_t Reserved3      : 1;   // 位17: 保留，必须为0 (Reserved, RES0)
-    uint32_t nTWE           : 1;   // 位18: 捕获EL0执行的WFE指令 (Traps EL0 execution of WFE instructions)
-    uint32_t WXN            : 1;   // 位19: 写权限意味着XN (Write permission implies Execute-never)
-    uint32_t UWXN           : 1;   // 位20: 非特权写权限意味着PL1 XN (Unprivileged write permission implies PL1 XN)
-    uint32_t Reserved4      : 1;   // 位21: 保留，必须为0 (Reserved, RES0)
-    uint32_t Reserved5      : 1;   // 位22: 保留，必须为1 (Reserved, RES1)
-    uint32_t SPAN           : 1;   // 位23: 设定特权访问从不 (Set Privileged Access Never)
-    uint32_t Reserved6      : 1;   // 位24: 保留，必须为0 (Reserved, RES0)
-    uint32_t EE             : 1;   // 位25: 例外向量分支时的PSTATE.E值和字节序 (PSTATE.E value on branch to an exception vector and endianness of stage 1 translation table walks)
-    uint32_t Reserved7      : 2;   // 位26-27: 保留，必须为0 (Reserved, RES0)
-    uint32_t TRE            : 1;   // 位28: TEX重新映射使能 (TEX remap enable)
-    uint32_t AFE            : 1;   // 位29: 访问标志使能 (Access Flag Enable)
-    uint32_t TE             : 1;   // 位30: T32例外使能 (T32 Exception Enable)
-    uint32_t DSSBS          : 1;   // 位31: 默认PSTATE.SSBS值 (Default PSTATE.SSBS value on Exception Entry)
+    unsigned int M : 1;             // 位0: 内存控制位：0表示禁用MMU或MPU，1表示启用
+    unsigned int A : 1;             // 位1: 对齐检查使能位：0表示禁用对齐故障检查，1表示启用
+    unsigned int C : 1;             // 位2: 缓存使能位：0表示禁用数据和统一缓存，1表示启用
+    unsigned int W : 1;             // 位3: 写缓冲区使能位：0表示禁用写缓冲区，1表示启用
+    unsigned int reserved1 : 3;     // 位4-6: 保留，RAO/SBOP
+    unsigned int B : 1;             // 位7: 大小端配置位：0表示小端，1表示大端（BE-32）
+    unsigned int S : 1;             // 位8: 系统保护位，向后兼容
+    unsigned int R : 1;             // 位9: ROM保护位，向后兼容
+    unsigned int F : 1;             // 位10: 实现定义
+    unsigned int Z : 1;             // 位11: 分支预测使能位：0表示禁用，1表示启用
+    unsigned int I : 1;             // 位12: 指令缓存使能位：0表示禁用，1表示启用
+    unsigned int V : 1;             // 位13: 向量表基址选择位：0表示0x00000000，1表示0xFFFF0000
+    unsigned int RR : 1;            // 位14: 轮替策略选择位：0表示普通替换策略，1表示可预测策略
+    unsigned int L4 : 1;            // 位15: ARMv5T Thumb互操作行为抑制位
+    unsigned int reserved2 : 16;    // 位16-31: 保留
 } SCTLR_t;
 
 // 获取SCTLR寄存器的值并存储到结构体中，paging_ops.asm
