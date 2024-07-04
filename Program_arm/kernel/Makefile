@@ -4,13 +4,17 @@ KERNEL_DIR = .
 
 # 所有组件目录
 PAGE_DIR = kernel_page
+TASK_DIR = kernel_task
+MEMORY_DIR = kernel_memory
 
 # 源文件
 KERNEL_C_SRC = $(KERNEL_DIR)/kernel.c
 
 # 标签标记所有的任务（输出什么文件），方便修改
 KERNEL_OBJS = $(KERNEL_DIR)/kernel.o \
-				$(KERNEL_DIR)/kernel_page.o
+				$(KERNEL_DIR)/kernel_page.o \
+				$(KERNEL_DIR)/kernel_task.o \
+				$(KERNEL_DIR)/kernel_memory.o
 
 # C 编译标志
 CFLAGS = -ffreestanding -nostdlib -Wall -Wextra
@@ -26,6 +30,12 @@ $(KERNEL_DIR)/kernel.o: $(KERNEL_C_SRC)
 # 执行各子模块编译
 $(KERNEL_DIR)/kernel_page.o:
 	$(MAKE) -C $(PAGE_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+
+$(KERNEL_DIR)/kernel_task.o:
+	$(MAKE) -C $(TASK_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+
+$(KERNEL_DIR)/kernel_memory.o:
+	$(MAKE) -C $(MEMORY_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 
 # 清理规则
 clean:
