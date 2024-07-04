@@ -23,7 +23,7 @@
 
 // 粗页表
 typedef struct {
-    uint32_t DescriptorType :2;            // 位0-1: 描述符类型，段描述符为1（二进制为01）
+    uint32_t DescriptorType :2;            // 位0-1: 描述符类型，粗页表为1（二进制为01）
     uint32_t ShouldBeZero : 3;             // 位2-4: 必须为零
     uint32_t Domain : 4;                   // 位5-8: 域，用作内存保护机制，16个可能的域
     uint32_t ImplementationDefined : 1;    // 位9: 实现定义

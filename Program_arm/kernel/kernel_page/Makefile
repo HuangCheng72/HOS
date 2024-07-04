@@ -16,11 +16,8 @@ KERNEL_OBJS = $(KERNEL_DIR)/kernel_page.o
 
 all: $(KERNEL_OBJS)
 
-# C 文件生成 汇编文件，再汇编生成.o，为什么这么做之前说过了，这个gcc的汇编器不知道什么问题
 # 编出来放到模块文件夹kernel去，别放在这里，方便主Makefile找
 $(KERNEL_DIR)/kernel_page.o: $(KERNEL_PAGE_C_SRC)
-	$(GCC) $(CFLAGS) -S -o $(KERNEL_PAGE_DIR)/kernel_page.asm $<
-	$(AS) -o $@ $(KERNEL_PAGE_DIR)/kernel_page.asm
-	del $(KERNEL_PAGE_DIR)\\kernel_page.asm
+	$(GCC) $(CFLAGS) -c -o $@ $<
 
 # 文件不生成于此，无需清理规则

@@ -53,6 +53,25 @@ void setup_page_directory() {
     page_directory[0xc00].ShouldBeZero3 = 0;
     page_directory[0xc00].BaseAddress = (DRAM_OFFSET >> 20);
 
+
+    // 增加自引用（偷懒所以用段描述符，实际上为了权限控制的话，应该用粗页表，把范围定死在这16KB里面）
+    // 这样访问的地址就是0xfff00000
+    // 但是注意，范围很大，有1MB，别越界
+    page_directory[0xfff].DescriptorType = 2;
+    page_directory[0xfff].Bufferable = 1;
+    page_directory[0xfff].Cacheable = 1;
+    page_directory[0xfff].ShouldBeZero0 = 0;
+    page_directory[0xfff].Domain = KERNEL_DOMAIN;
+    page_directory[0xfff].ImplementationDefined = 0;
+    page_directory[0xfff].AccessPermission = 2;     // 当然要特权读写用户只读
+    page_directory[0xfff].TypeExtension = 0;
+    page_directory[0xfff].ShouldBeZero1 = 0;
+    page_directory[0xfff].Shared = 0;
+    page_directory[0xfff].ShouldBeZero2 = 0;
+    page_directory[0xfff].PresentHigh = 0;
+    page_directory[0xfff].ShouldBeZero3 = 0;
+    page_directory[0xfff].BaseAddress = ((PAGE_DIR_TABLE_POS + DRAM_OFFSET) >> 20);
+
     // ramdisk暂时不管，用到了再说
 }
 
