@@ -7,12 +7,8 @@ PAGE_DIR = kernel_page
 TASK_DIR = kernel_task
 MEMORY_DIR = kernel_memory
 
-# 源文件
-KERNEL_C_SRC = $(KERNEL_DIR)/kernel.c
-
 # 标签标记所有的任务（输出什么文件），方便修改
-KERNEL_OBJS = $(KERNEL_DIR)/kernel.o \
-				$(KERNEL_DIR)/kernel_page.o \
+KERNEL_OBJS = $(KERNEL_DIR)/kernel_page.o \
 				$(KERNEL_DIR)/kernel_task.o \
 				$(KERNEL_DIR)/kernel_memory.o
 
@@ -22,10 +18,6 @@ CFLAGS = -ffreestanding -nostdlib -Wall -Wextra
 .PHONY: all
 
 all: $(KERNEL_OBJS)
-
-# arm交叉编译工具链的gcc没问题了，可以直接编目标文件.o
-$(KERNEL_DIR)/kernel.o: $(KERNEL_C_SRC)
-	$(GCC) $(CFLAGS) -c -o $@ $<
 
 # 执行各子模块编译
 $(KERNEL_DIR)/kernel_page.o:

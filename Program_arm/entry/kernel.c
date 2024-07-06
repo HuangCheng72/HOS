@@ -3,8 +3,8 @@
 //
 
 #include "../lib/lib_kernel/lib_kernel.h"
-#include "kernel_page/kernel_page.h"
-#include "kernel_task/kernel_task.h"
+#include "../kernel/kernel_page/kernel_page.h"
+#include "../kernel/kernel_task/kernel_task.h"
 
 void kernel_main(void) {
     // u-boot已经给我们设置了管理模式

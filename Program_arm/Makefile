@@ -13,6 +13,7 @@ MAKE = make
 # 这样烧写起来也方便，所以要在主Makefile这里统一链接
 
 # 所有组件目录
+ENTRY_DIR = entry
 KERNEL_DIR = kernel
 LIB_DIR = lib
 DEVICE_DIR = devices
@@ -38,6 +39,7 @@ all: compile link bin
 
 # 编译各组件
 compile:
+	$(MAKE) -C $(ENTRY_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(LIB_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(KERNEL_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 #	$(MAKE) -C $(DEVICE_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
@@ -46,7 +48,8 @@ compile:
 
 # 链接生成 kernel.elf
 link:
-	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(wildcard $(KERNEL_DIR)/*.o) \
+	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(wildcard $(ENTRY_DIR)/*.o) \
+										$(wildcard $(KERNEL_DIR)/*.o) \
 										$(wildcard $(LIB_DIR)/*.o)
 #										$(wildcard $(DEVICE_DIR)/*.o) \
 #										$(wildcard $(USER_DIR)/*.o) \
@@ -57,6 +60,7 @@ bin:
 	$(OBJCOPY) -O binary $(KERNEL_ELF) $(KERNEL_BIN)
 
 clean:
+	$(MAKE) -C $(ENTRY_DIR) clean
 	$(MAKE) -C $(KERNEL_DIR) clean
 	$(MAKE) -C $(LIB_DIR) clean
 	$(MAKE) -C $(DEVICE_DIR) clean
