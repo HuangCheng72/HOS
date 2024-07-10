@@ -78,8 +78,8 @@ void kernel_main(void) {
     set_cntfrq(1000000);
     // 计时器的值，每次操作就-1，减到0就打一次中断
     // 理论上set_cntp_tval(1000000)设置应该是1s，在qemu上实测快得多，差不多是100毫秒
-    // 之前x86设置是一秒一百次，所以设置为100000就行了
-    set_cntp_tval(100000);
+    // 之前x86设置是一秒一百次，在这里设置成500000就行了，没必要那么快
+    set_cntp_tval(500000);
     // 启用定时器
     enable_cntp_timer();
 
@@ -140,7 +140,7 @@ void test() {
     // 停用定时器
     disable_cntp_timer();
     // 设置计时器初始值
-    set_cntp_tval(100000);
+    set_cntp_tval(500000);
     // 启用定时器以生成下一次中断
     enable_cntp_timer();
 }
