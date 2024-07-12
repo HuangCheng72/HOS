@@ -1,6 +1,7 @@
 .section .text
 .global irq_handler
 .extern irq_interrupt_dispatcher
+.extern task_switch
 
 // 关于arm的模式
 // 0b10000 或 0x10：用户模式（User Mode）
@@ -17,41 +18,46 @@ irq_handler:
     // 此时lr是中断前pc + 4（下一条指令地址，CPU自动保存）
     cpsid i                 // 禁用IRQ中断
     // irq模式有irq模式自己的栈（u-boot设置过了，栈底直接在0xffffffff处）
-    // 如果图方便的话就在此时进入管理模式，这样就可以用管理模式下的栈了
-    // 一般来说还是推荐分离，分离的话在初始化的时候使用
-    // 如果用管理模式栈的话，在这里切换管理模式即可
-    // 但是那样就没法获取spsr中的值了
 
-    push    {r0-r12, lr}    // 由于我担心可能用到的寄存器多，所以我保存了所有的通用寄存器以及lr（不然无法返回）
+    // 从arm v6开始，arm提供了两条汇编指令，专门用于中断上下文保存
+    // srsdb，直接把spsr和lr保存到指定位置，还可以切换到其他模式，一般是srsdb sp!, #0x13（保存到当前模式栈，然后切换到管理模式）
+    // rfeia，从指定位置恢复spsr和lr，并且直接跳转回lr指向的指令，直接恢复中断处理前的模式，一般是rfeia sp!
+    // srsdb压栈顺序是先spsr，后lr，rfeia弹栈顺序相反，这两个函数不需要寄存器中继
 
-    mrs     r0, spsr        // 保存中断前的cpsr
-    push    {r0}
+    // 统一IRQ栈地址，这样就不用考虑清理IRQ栈的问题了
+    ldr     sp, =0x40008000
 
-    cps     #0x13           // 不管什么模式，都要切换到管理模式以处理中断（切换到内核态）
+    // 直接保存所有通用寄存器到IRQ栈（中断发生时所有上下文都被保存了）
+    push    {r0-r12}
 
-    // C语言是压栈传参的，但是这里没参数
+    // IRQ模式的栈和管理模式的栈分离，完全没办法用x86下的做法了
+    // 我又一时间发明不了新的做法
+    // 只能尝试约定一个位置专门存放这两个元素，直接放在IRQ栈，位置固定，好解决
+
+    // 从arm v2开始，arm支持stmdb和ldmia指令，这两个指令可以直接把寄存器列表保存到指定地方
+    // push和pop相当于限定死了目的地是栈，这两个指令比较自由，但是这两个指令好像不能保存spsr
+    // 为了可读性还是用push和pop吧，这两个一看就知道
+
+    mrs     r0, spsr            // 保存中断前的cpsr
+    push    {r0}                // 压栈保存spsr
+    push    {lr}                // 压栈保存lr
+
+    // IRQ模式也算是特权模式，可以视为内核态，反正也能处理就是了
+
     bl irq_interrupt_dispatcher // 调用IRQ中断分发器，bl指令会自动保存lr，能回得来
 
-    cps     #0x12           // 切换回IRQ模式，要不然就无法获取这些值了
+    // 尝试切换任务
+    // 这时候尝试切换，如果回得来，不怕数据丢失
+    // 如果回不来，重入中断的时候栈指针又是重设的，不怕栈没清空
+    // 至于CPSR，状态问题更不用担心了，哪个进入中断之前都是允许中断的
+    bl      task_switch
 
-    pop     {r0}            // 恢复cpsr的时候也恢复了原来的模式
+    pop     {lr}                // 恢复lr
+    pop     {r0}                // 恢复spsr
     msr     spsr_cxsf, r0
 
-    // _cxsf后缀意义如下：
-    // c（Condition flags）：
-    // 条件标志，包括N（负）、Z（零）、C（进位/溢出）和V（溢出）。
-    // 这些标志位用于条件执行指令的判断，例如比较和分支。
-    // x（Extension flags）：
-    // 扩展标志，包含J（Jazelle状态）和GE[3:0]（Greater than or Equal flags）。
-    // 这些标志位在一些特定的处理器模式和扩展中使用，例如Jazelle模式和高级SIMD（NEON）操作。
-    // s（State flags）：
-    // 状态标志，包括T（Thumb状态）、E（字节序）和IT[7:0]（If-Then状态）。
-    // 这些标志位用于指示处理器当前的执行状态，如是Thumb指令集还是ARM指令集，或者当前的字节序设置。
-    // f（Flags field）：
-    // 标志字段，包括中断屏蔽标志I（IRQ禁用）、F（FIQ禁用）和A（异步中止禁用）。
-    // 这些标志位用于控制中断的使能和屏蔽状态。
-    // 加上这个标志表示全部修改，不加的话等效于spsr_c，只能修改条件标志
+    pop     {r0-r12}            // 恢复其他上下文
 
-    pop     {r0-r12, lr}    // 恢复保存的寄存器
-    cpsie i                 // 启用IRQ中断
-    subs    pc, lr, #4      // 返回中断前的位置（CPU会自动恢复spsr_irq到cpsr）
+
+    cpsie i                     // 启用IRQ中断
+    subs    pc, lr, #4          // 返回中断前的位置（CPU会自动恢复spsr_irq到cpsr）

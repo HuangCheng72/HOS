@@ -20,6 +20,10 @@ uint32_t read_cntpct();
 // 用于测试通用中断控制器GIC和中断处理函数是否正常使用
 void test();
 
+/* 两个都是在线程中运行的函数 */
+void k_thread_a(void* arg);
+void k_thread_b(void* arg);
+
 void kernel_main(void) {
     // u-boot已经给我们设置了管理模式
     // 一进来就已经是管理模式了
@@ -71,6 +75,9 @@ void kernel_main(void) {
     add_interrupt_handler(30, test, 0);
     enable_gic_irq_interrupt(30);
 
+    task_create("k_thread_a", 31, k_thread_a, "argA ");
+    task_create("k_thread_b", 8, k_thread_b, "argB ");
+
 
     // 使用的是硬件定时器
     // 设置计数器，单位是Hz（赫兹，每秒钟计时多少次）
@@ -86,7 +93,10 @@ void kernel_main(void) {
     // 开启IRQ中断
     intr_enable();
 
-    for(;;);
+    for(;;) {
+        put_str("KERNEL ");
+        for(uint32_t i = 0; i < UINT16_MAX; i++);
+    }
 }
 
 // 定义寄存器访问宏
@@ -135,7 +145,13 @@ uint32_t read_cntpct() {
 void test() {
 
     // 逻辑代码
-    put_str("interrupt test!\n");
+    struct task* cur_task = running_task();
+    cur_task->elapsed_ticks++;	  // 记录此线程占用的cpu时间嘀
+    if (cur_task->ticks == 0) {	  // 若任务时间片用完就开始调度新的任务上cpu
+        task_schedule();
+    } else {				  // 将当前任务的时间片-1
+        cur_task->ticks--;
+    }
 
     // 停用定时器
     disable_cntp_timer();
@@ -143,4 +159,24 @@ void test() {
     set_cntp_tval(500000);
     // 启用定时器以生成下一次中断
     enable_cntp_timer();
+}
+
+/* 在线程中运行的函数 */
+void k_thread_a(void* arg) {
+/* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
+    char* para = arg;
+    while(1) {
+        put_str(para);
+        for(uint32_t i = 0; i < UINT16_MAX; i++);
+    }
+}
+
+/* 在线程中运行的函数 */
+void k_thread_b(void* arg) {
+/* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
+    char* para = arg;
+    while(1) {
+        put_str(para);
+        for(uint32_t i = 0; i < UINT16_MAX; i++);
+    }
 }
