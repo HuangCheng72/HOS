@@ -66,6 +66,8 @@ void init_memory(uint32_t total_physical_memory) {
     // 物理地址上已经占据了的置为1
     // 低端1MB全部被内核占据了，还有页表、位图（按照上面取整，直接按0x130000计算，以下全部当作被占据）
     bitmap_set_range(global_bitmap_physical_memory, 0, 0x130000 / PG_SIZE, 1);
+    // RAMDISK占据了最后16MB，因此这里也要设置位图为已占据
+    bitmap_set_range(global_bitmap_physical_memory, 0x7000000 / PG_SIZE, 0x1000000 / PG_SIZE, 1);
 
     // 虚拟地址管理的设置（内核虚拟地址写在线程的TCB里面）
     KERNEL_TCB->process_virtual_address.virtual_addr_start = KERNEL_VIRTUAL_ADDR_START;

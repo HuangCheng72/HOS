@@ -72,7 +72,27 @@ void setup_page_directory() {
     page_directory[0xfff].ShouldBeZero3 = 0;
     page_directory[0xfff].BaseAddress = ((PAGE_DIR_TABLE_POS + DRAM_OFFSET) >> 20);
 
-    // ramdisk暂时不管，用到了再说
+    // 移植虚拟外存所需的16条段页表（16MB）
+    for(uint32_t i = 0; i < 16; i++) {
+        page_directory[0xa00 + i].DescriptorType = 2;
+        page_directory[0xa00 + i].Bufferable = 1;
+        page_directory[0xa00 + i].Cacheable = 1;
+        page_directory[0xa00 + i].ShouldBeZero0 = 0;
+        page_directory[0xa00 + i].Domain = KERNEL_DOMAIN;
+        page_directory[0xa00 + i].ImplementationDefined = 0;
+        page_directory[0xa00 + i].AccessPermission = 2;     // 当然要特权读写用户只读
+        page_directory[0xa00 + i].TypeExtension = 0;
+        page_directory[0xa00 + i].ShouldBeZero1 = 0;
+        page_directory[0xa00 + i].Shared = 0;
+        page_directory[0xa00 + i].ShouldBeZero2 = 0;
+        page_directory[0xa00 + i].PresentHigh = 0;
+        page_directory[0xa00 + i].ShouldBeZero3 = 0;
+        // 128MB的最后16MB
+        // 0x8000000 - 0x1000000 = 0x7000000
+        // 1MB为0x100000
+        page_directory[0xa00 + i].BaseAddress = ((DRAM_OFFSET + 0x7000000 + i * 0x100000) >> 20);
+    }
+
 }
 
 void init_paging() {
