@@ -8,15 +8,13 @@
 #include "../kernel/kernel_interrupt/kernel_interrupt.h"
 #include "../kernel/kernel_device/kernel_device.h"
 #include "../devices/console/console.h"
+#include "../devices/rtc_cmos/rtc_cmos.h"
+#include "../fs/fs.h"
 
-// 用于测试通用中断控制器GIC和中断处理函数是否正常使用
-void test();
+// 文件系统测试函数
+void test_fs();
 
-/* 两个都是在线程中运行的函数 */
-void k_thread_a(void* arg);
-void k_thread_b(void* arg);
-
-void kernel_main(void) {
+        void kernel_main(void) {
     // u-boot已经给我们设置了管理模式
     // 一进来就已经是管理模式了
 
@@ -37,14 +35,14 @@ void kernel_main(void) {
     // 初始化设备驱动管理
     init_all_devices();
 
-    task_create("k_thread_a", 31, k_thread_a, "argA ");
-    task_create("k_thread_b", 8, k_thread_b, "argB ");
-
     // 开启IRQ中断
     intr_enable();
 
     // 允许定时器中断
     enable_gic_irq_interrupt(30);
+
+    // 测试文件系统
+    test_fs();
 
     for(;;);
 
@@ -52,22 +50,134 @@ void kernel_main(void) {
     exit_all_devices();
 }
 
-/* 在线程中运行的函数 */
-void k_thread_a(void* arg) {
-/* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
-    char* para = arg;
-    while(1) {
-        console_put_str(para);
-        for(uint32_t i = 0; i < UINT16_MAX; i++);
-    }
-}
+// 文件系统测试函数
+void test_fs() {
+    FS_DESC fileDesc;
+    FS_STAT fileStat;
+    uint8_t readBuffer[512];
+    const char *testData = "This is a test string for the file system.";
+    int16_t result;
 
-/* 在线程中运行的函数 */
-void k_thread_b(void* arg) {
-/* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
-    char* para = arg;
-    while(1) {
-        console_put_str(para);
-        for(uint32_t i = 0; i < UINT16_MAX; i++);
+    // 启动文件系统
+    result = fs_start();
+    if (result != 0) {
+        return;
     }
+
+    // 格式化文件系统（完全格式化）
+    result = fs_format(FS_FORMAT_FULL);
+    if (result != 0) {
+        fs_exit();
+        return;
+    }
+
+    // 打开文件（创建并写入）
+    result = fs_open(&fileDesc, "/home/user/testfile.txt");
+    if (result < 0) {
+        fs_exit();
+        return;
+    }
+
+    // 写入文件
+    result = fs_write(&fileDesc, (uint8_t *)testData, strlen(testData));
+    if (result < 0) {
+        fs_close(&fileDesc);
+        fs_exit();
+        return;
+    }
+
+    // 关闭文件
+    result = fs_close(&fileDesc);
+    if (result != 0) {
+        fs_exit();
+        return;
+    }
+
+    console_printf("----------------------------------------------------------------\n");
+
+    // 重新打开/home/user/testfile.txt 文件
+    result = fs_open(&fileDesc, "/home/user/testfile.txt");
+    if (result < 0) {
+        console_printf("Failed to open file: /home/user/testfile.txt\n");
+        fs_exit();
+        return;
+    }
+    console_printf("File opened: /home/user/testfile.txt\n");
+
+    // 移动前获取文件信息
+    result = fs_info(&fileDesc, &fileStat);
+    if (result != 0) {
+        console_printf("Failed to get file info: /home/user/testfile.txt\n");
+        fs_close(&fileDesc);
+        fs_exit();
+        return;
+    }
+    console_printf("Before move. File info - Name: %s, Length: %u, Created: %u, Modified: %u, CRC32: %08x\n",
+                   fileStat.fname, fileStat.file_len, fileStat.file_ctime, fileStat.file_mtime, fileStat.file_crc32);
+
+    // 并将其移动到 /home/user/newdir/ 目录
+    result = fs_move(&fileDesc, "/home/user/newdir/");
+    if (result != 0) {
+        console_printf("Failed to move file to directory: /home/user/newdir/\n");
+        return;
+    }
+    console_printf("File moved: /home/user/testfile.txt to /home/user/newdir/\n");
+
+    // 关闭文件
+    result = fs_close(&fileDesc);
+    if (result != 0) {
+        console_printf("Failed to close file: /home/user/testfile.txt\n");
+        fs_exit();
+        return;
+    }
+    console_printf("File closed: /home/user/testfile.txt\n");
+
+    // 检查文件是否成功移动
+
+    // 以新路径打开
+    result = fs_open(&fileDesc, "/home/user/newdir/testfile.txt");
+    if (result != 0) {
+        console_printf("%d Failed to opened file: /home/user/newdir/testfile.txt\n", result);
+        fs_exit();
+        return;
+    }
+    console_printf("File opened: /home/user/newdir/testfile.txt\n");
+
+    // 读取文件
+    result = fs_read(&fileDesc, readBuffer, sizeof(readBuffer) - 1);
+    if (result < 0) {
+        console_printf("Failed to read from file: /home/user/newdir/testfile.txt\n");
+        fs_close(&fileDesc);
+        fs_exit();
+        return;
+    }
+    console_printf("Data read from file: %s\n", readBuffer);
+
+    // 获取文件信息
+    result = fs_info(&fileDesc, &fileStat);
+    if (result != 0) {
+        console_printf("Failed to get file info: /home/user/newdir/testfile.txt\n");
+        fs_close(&fileDesc);
+        fs_exit();
+        return;
+    }
+    console_printf("After move. File info - Name: %s, Length: %u, Created: %u, Modified: %u, CRC32: %08x\n",
+                   fileStat.fname, fileStat.file_len, fileStat.file_ctime, fileStat.file_mtime, fileStat.file_crc32);
+
+    // 关闭文件
+    result = fs_close(&fileDesc);
+    if (result != 0) {
+        console_printf("Failed to close file after all: /home/user/newdir/testfile.txt\n");
+        fs_exit();
+        return;
+    }
+    console_printf("File closed after all: /home/user/newdir/testfile.txt\n");
+
+    // 退出文件系统
+    result = fs_exit();
+    if (result != 0) {
+        console_printf("Failed to exit file system.\n");
+        return;
+    }
+    console_printf("File system exited.\n");
 }

@@ -43,17 +43,17 @@ compile:
 	$(MAKE) -C $(LIB_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(KERNEL_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(DEVICE_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+	$(MAKE) -C $(FS_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 #	$(MAKE) -C $(USER_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
-#	$(MAKE) -C $(FS_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 
 # 链接生成 kernel.elf
 link:
 	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(wildcard $(ENTRY_DIR)/*.o) \
 										$(wildcard $(KERNEL_DIR)/*.o) \
 										$(wildcard $(LIB_DIR)/*.o) \
-										$(wildcard $(DEVICE_DIR)/*.o)
+										$(wildcard $(DEVICE_DIR)/*.o) \
+										$(wildcard $(FS_DIR)/*.o)
 #										$(wildcard $(USER_DIR)/*.o) \
-#										$(wildcard $(FS_DIR)/*.o)
 
 # 提取二进制文件kernel.bin
 bin:
