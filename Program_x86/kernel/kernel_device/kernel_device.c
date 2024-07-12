@@ -212,7 +212,7 @@ void driver_remove(const char *driver_name) {
             }
 
             // 需要内核缓冲区，而且已经被分配了缓冲区的情况
-            alloc_driver_buffer(drv);
+            free_driver_buffer(drv);
 
             // 检查是否需要清除中断处理逻辑
             if (drv->irq >= 0 && drv->irq < 16 && interrupt_handler_functions[drv->irq + 0x20] == drv->irq_interrupt_handler) {
