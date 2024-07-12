@@ -103,3 +103,196 @@ uint32_t strchrs(const char* str, uint8_t ch) {
     }
     return ch_cnt;
 }
+
+void int_to_str(int num, char *buffer) {
+    int i = 0;
+    int is_negative = 0;
+
+    if (num < 0) {
+        is_negative = 1;
+        num = -num;
+    }
+
+    do {
+        buffer[i++] = (num % 10) + '0';
+        num /= 10;
+    } while (num > 0);
+
+    if (is_negative) {
+        buffer[i++] = '-';
+    }
+
+    buffer[i] = '\0';
+
+    for (int j = 0; j < i / 2; ++j) {
+        char temp = buffer[j];
+        buffer[j] = buffer[i - j - 1];
+        buffer[i - j - 1] = temp;
+    }
+}
+
+void uint_to_str(unsigned int num, char *buffer) {
+    int i = 0;
+
+    do {
+        buffer[i++] = (num % 10) + '0';
+        num /= 10;
+    } while (num > 0);
+
+    buffer[i] = '\0';
+
+    for (int j = 0; j < i / 2; ++j) {
+        char temp = buffer[j];
+        buffer[j] = buffer[i - j - 1];
+        buffer[i - j - 1] = temp;
+    }
+}
+
+void hex_to_str(unsigned int num, char *buffer) {
+    const char *digits = "0123456789abcdef";
+    int i = 0;
+
+    do {
+        buffer[i++] = digits[num % 16];
+        num /= 16;
+    } while (num > 0);
+
+    buffer[i] = '\0';
+
+    for (int j = 0; j < i / 2; ++j) {
+        char temp = buffer[j];
+        buffer[j] = buffer[i - j - 1];
+        buffer[i - j - 1] = temp;
+    }
+}
+
+void ptr_to_str(void* ptr, char* buffer) {
+    unsigned long addr = (unsigned long)ptr;
+    hex_to_str(addr, buffer);
+}
+
+/*
+
+// 因为arm的gcc又发疯了，非要用库函数操作double类型数据
+// 没办法只能用定点数代替浮点数，它爱发疯就发疯吧，不奉陪
+// 这个版本是GPT 4o写的替代版
+void double_to_str_int(int int_part, int frac_part, char* buffer, int precision) {
+    if (precision < 0) {
+        precision = 6;
+    }
+
+    // 把整数部分转换为字符串
+    int_to_str(int_part, buffer);
+    while (*buffer) buffer++;
+
+    *buffer++ = '.';
+
+    // 将小数部分按精度进行处理
+    for (int i = 0; i < precision; ++i) {
+        frac_part *= 10;
+    }
+
+    // 把小数部分转换为字符串
+    char frac_buffer[20];
+    int_to_str(frac_part, frac_buffer);
+
+    // 补齐前导零
+    int frac_length = strlen(frac_buffer);
+    for (int i = 0; i < precision - frac_length; ++i) {
+        *buffer++ = '0';
+    }
+
+    // 将小数部分拷贝到 buffer
+    strcpy(buffer, frac_buffer);
+}
+
+// 包装函数
+// 经过测试，只要是double一律调库，double任何运算全部调库，受不了了，弃用
+void double_to_str(double num, char* buffer, int precision) {
+    // 处理负数
+    if (num < 0) {
+        *buffer++ = '-';
+        num = -num;
+    }
+
+    // 提取整数部分和小数部分
+    int int_part = (int)num;
+    int frac_part = (int)((num - int_part) * 1000000); // 使用 10^6 来保留小数部分
+
+    // 调用整数处理的函数
+    double_to_str_int(int_part, frac_part, buffer, precision);
+}
+
+*/
+
+int sprintf(char* buffer, const char* format, ...) {
+    const char* p = format;
+    int* arg = (int*)(void*)(&format + 1);
+    char* buf_ptr = buffer;
+    char temp_buffer[32];
+
+    while (*p) {
+        if (*p == '%' && *(p + 1) != '\0') {
+            p++;
+            int width = 0;
+            int precision = -1;
+
+            while (*p >= '0' && *p <= '9') {
+                width = width * 10 + (*p - '0');
+                p++;
+            }
+
+            if (*p == '.') {
+                p++;
+                precision = 0;
+                while (*p >= '0' && *p <= '9') {
+                    precision = precision * 10 + (*p - '0');
+                    p++;
+                }
+            }
+
+            switch (*p) {
+                case 'd':
+                    int_to_str(*arg++, temp_buffer);
+                    break;
+                case 'u':
+                    uint_to_str(*arg++, temp_buffer);
+                    break;
+                case 'x':
+                    hex_to_str(*arg++, temp_buffer);
+                    break;
+                case 'c':
+                    *temp_buffer = (char)*arg++;
+                    temp_buffer[1] = '\0';
+                    break;
+                case 's': {
+                    char* str = (char*)*arg++;
+                    while (*str) {
+                        *buf_ptr++ = *str++;
+                    }
+                    continue;
+                }
+                case 'p':
+                    ptr_to_str((void*)*arg++, temp_buffer);
+                    break;
+//                case 'f':         // 原因我也在上面说了，实在不行
+//                    double_to_str(*(double*)arg++, temp_buffer, precision);
+//                    break;
+                default:
+                    *buf_ptr++ = '%';
+                    *buf_ptr++ = *p;
+                    continue;
+            }
+
+            char* temp_ptr = temp_buffer;
+            while (*temp_ptr) {
+                *buf_ptr++ = *temp_ptr++;
+            }
+        } else {
+            *buf_ptr++ = *p;
+        }
+        p++;
+    }
+    *buf_ptr = '\0';
+    return buf_ptr - buffer;
+}
