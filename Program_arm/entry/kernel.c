@@ -7,6 +7,7 @@
 #include "../kernel/kernel_task/kernel_task.h"
 #include "../kernel/kernel_interrupt/kernel_interrupt.h"
 #include "../kernel/kernel_device/kernel_device.h"
+#include "../devices/console/console.h"
 
 // 用于测试通用中断控制器GIC和中断处理函数是否正常使用
 void test();
@@ -56,7 +57,7 @@ void k_thread_a(void* arg) {
 /* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
     char* para = arg;
     while(1) {
-        put_str(para);
+        console_put_str(para);
         for(uint32_t i = 0; i < UINT16_MAX; i++);
     }
 }
@@ -66,7 +67,7 @@ void k_thread_b(void* arg) {
 /* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
     char* para = arg;
     while(1) {
-        put_str(para);
+        console_put_str(para);
         for(uint32_t i = 0; i < UINT16_MAX; i++);
     }
 }
