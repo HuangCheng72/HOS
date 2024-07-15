@@ -129,7 +129,7 @@ void wrap_task_to_process() {
     // 先禁止中断，我怕设置不完成
     enum intr_status old_status = intr_disable();
     // 把之前没完成的设置完成了，申请一个页作为用户态进程栈
-    struct interrupt_stack* int_stack = (struct interrupt_stack*)((uint32_t)(running_task()) + PG_SIZE - sizeof(struct task_info_stack));
+    struct interrupt_stack* int_stack = (struct interrupt_stack*)((uint32_t)(running_task()) + PG_SIZE - sizeof(struct interrupt_stack));
 
     // 之前把这个操作完善了，这会在用户内存池（16MB以后申请内存空间，并且映射到用户进程自己的页表上）
     void *user_stack = malloc_page(USER_FLAG, 1);
