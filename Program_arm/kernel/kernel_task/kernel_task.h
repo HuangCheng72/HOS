@@ -86,4 +86,7 @@ void task_unblock(struct task *task);
 // 让出CPU时间，但不阻塞
 void task_yield(void);
 
+// 让处理器进入低功耗模式等待中断发生
+void task_idle();
+
 #endif //HOS_KERNEL_TASK_H
