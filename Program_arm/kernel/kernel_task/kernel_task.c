@@ -189,7 +189,13 @@ void task_schedule(void) {
         // 我怕你没删除，所以我无论如何都要删除一遍
         // 总之你不是task_running，你就是其他的，那不准进入ready_list
         // 所以保证不得留在ready_list里面
-        list_del(&current_task->general_tag);
+
+        // 这里发现问题了，task_yield里面本来已经插到末尾了，这里如果不判断的话，会出问题，彻底丢失无法调度了
+        if(current_task->status != TASK_READY) {
+            list_del(&current_task->general_tag);
+        }
+        // 主动让出使用权不得删除
+        // 其实不删除也行，但我觉得还是删除比较保险
     }
 
     if(list_empty(&ready_list)) {
@@ -204,7 +210,7 @@ void task_schedule(void) {
     }
 }
 
-// 任务切换，在IRQ0中断处理函数末尾调用
+// 任务切换，在IRQ处理函数中调用
 void task_switch(void){
     if ( current_task == next_task ) {
         // 无需切换，直接返回，不要浪费资源
@@ -224,6 +230,54 @@ void task_switch(void){
 
 // 阻塞当前调用的任务，并修改任务为指定状态（如果想不调度，就挂起、阻塞、等待）
 void task_block(enum task_status stat) {
+    // 为了配合新的switch_to函数
+    // 要在这里保存上下文到指定位置，也就是IRQ栈位置（这里没进入中断，只能手动更新，不然就是先前的）
+    // 不能调用函数，怕lr改变，只能用内联汇编写
+    // 因为怕cpsr的条件状态改变，所以直接ldr，这样不会有条件状态位改变的问题
+    // 进入这里的时候，lr保存的位置是调用task_yield命令的下一条（也就是pc + 4）
+    // 因为切换命令是subs    pc, lr, #4，就会无限进入task_yield
+    // 所以需要修改，再增加一个偏移量
+    // 因为进入switch_to之前会经过几个函数，有不少临时变量都在栈上
+    // 也可以直接用新的栈，每次都是新栈，这样就不怕出事了，类似于irq_handler，而且还不用清理
+
+    // 这里先记录到约定位置，注意arm的C语言调用约定寄存器传参问题
+    asm volatile("push  {r12}\n"
+                 "ldr   r12, =0xc0007ff8\n"
+                 "str   r11, [r12]\n"
+                 "ldr   r12, =0xc0007ff4\n"
+                 "str   r10, [r12]\n"
+                 "ldr   r12, =0xc0007ff0\n"
+                 "str   r9, [r12]\n"
+                 "ldr   r12, =0xc0007fec\n"
+                 "str   r8, [r12]\n"
+                 "ldr   r12, =0xc0007fe8\n"
+                 "str   r7, [r12]\n"
+                 "ldr   r12, =0xc0007fe4\n"
+                 "str   r6, [r12]\n"
+                 "ldr   r12, =0xc0007fe0\n"
+                 "str   r5, [r12]\n"
+                 "ldr   r12, =0xc0007fdc\n"
+                 "str   r4, [r12]\n"
+                 "ldr   r12, =0xc0007fd8\n"
+                 "str   r3, [r12]\n"
+                 "ldr   r12, =0xc0007fd4\n"
+                 "str   r2, [r12]\n"
+                 "ldr   r12, =0xc0007fd0\n"
+                 "str   r1, [r12]\n"
+                 "ldr   r12, =0xc0007fcc\n"
+                 "str   r0, [r12]\n"
+                 "ldr   r11, =0xc0007ffc\n"
+                 "pop   {r12}\n"
+                 "str   r12, [r11]\n"
+                 "ldr   r12, =0xc0007fc8\n"
+                 "mrs   r11, cpsr\n"
+                 "str   r11, [r12]\n"
+                 "ldr   r12, =0xc0007fc4\n"
+                 "add   r11, lr, #4\n"
+                 "str   r11, [r12]\n"
+                 "ldr   sp, =0xc0007800\n"
+    );
+
     // 关闭中断，保存先前状态
     enum intr_status old_status = intr_disable();
     // 获取现在正在进行的任务（可能更新不及时，注意）
@@ -265,6 +319,54 @@ void task_unblock(struct task *task) {
 
 // 让出CPU时间，但不阻塞
 void task_yield() {
+    // 为了配合新的switch_to函数
+    // 要在这里保存上下文到指定位置，也就是IRQ栈位置（这里没进入中断，只能手动更新，不然就是先前的）
+    // 不能调用函数，怕lr改变，只能用内联汇编写
+    // 因为怕cpsr的条件状态改变，所以直接ldr，这样不会有条件状态位改变的问题
+    // 进入这里的时候，lr保存的位置是调用task_yield命令的下一条（也就是pc + 4）
+    // 因为切换命令是subs    pc, lr, #4，就会无限进入task_yield
+    // 所以需要修改，再增加一个偏移量
+    // 因为进入switch_to之前会经过几个函数，有不少临时变量都在栈上
+    // 也可以直接用新的栈，每次都是新栈，这样就不怕出事了，类似于irq_handler，而且还不用清理
+
+    // 这里先记录到约定位置，注意arm的C语言调用约定寄存器传参问题
+    asm volatile("push  {r12}\n"
+                 "ldr   r12, =0xc0007ff8\n"
+                 "str   r11, [r12]\n"
+                 "ldr   r12, =0xc0007ff4\n"
+                 "str   r10, [r12]\n"
+                 "ldr   r12, =0xc0007ff0\n"
+                 "str   r9, [r12]\n"
+                 "ldr   r12, =0xc0007fec\n"
+                 "str   r8, [r12]\n"
+                 "ldr   r12, =0xc0007fe8\n"
+                 "str   r7, [r12]\n"
+                 "ldr   r12, =0xc0007fe4\n"
+                 "str   r6, [r12]\n"
+                 "ldr   r12, =0xc0007fe0\n"
+                 "str   r5, [r12]\n"
+                 "ldr   r12, =0xc0007fdc\n"
+                 "str   r4, [r12]\n"
+                 "ldr   r12, =0xc0007fd8\n"
+                 "str   r3, [r12]\n"
+                 "ldr   r12, =0xc0007fd4\n"
+                 "str   r2, [r12]\n"
+                 "ldr   r12, =0xc0007fd0\n"
+                 "str   r1, [r12]\n"
+                 "ldr   r12, =0xc0007fcc\n"
+                 "str   r0, [r12]\n"
+                 "ldr   r11, =0xc0007ffc\n"
+                 "pop   {r12}\n"
+                 "str   r12, [r11]\n"
+                 "ldr   r12, =0xc0007fc8\n"
+                 "mrs   r11, cpsr\n"
+                 "str   r11, [r12]\n"
+                 "ldr   r12, =0xc0007fc4\n"
+                 "add   r11, lr, #4\n"
+                 "str   r11, [r12]\n"
+                 "ldr   sp, =0xc0007800\n"
+    );
+
     // 关闭中断，防止任务切换过程中出现竞态条件
     enum intr_status old_status = intr_disable();
 
