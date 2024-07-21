@@ -4,6 +4,8 @@
 
 #include "../lib/lib_kernel/lib_kernel.h"
 #include "../kernel/kernel_page/kernel_page.h"
+#include "../kernel/kernel_task/kernel_task.h"
+#include "../kernel/kernel_memory/kernel_memory.h"
 
 /*GPIO registers*/
 #define GPBCON              (*(volatile unsigned long *)0x56000010)
@@ -61,11 +63,10 @@ void kernel_main(void) {
     init_paging();
     // 重新加载内核栈
     switch_sp(0xc0007000);
-
-    // 测试分页后能不能用
-    *((uint32_t *)0x30004000) = 0xabcd;
-    put_int(*((uint32_t *)0xc0004000));
-    put_char('\n');
+    // 初始化task
+    init_multitasking();
+    // 初始化内存管理（JZ2440的内存大小是64MB，也就是0x4000000，可以直接写死）
+    init_memory(0x4000000);
 
     for(;;);
 }
