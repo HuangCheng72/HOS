@@ -3,8 +3,10 @@
 .global _start
 .extern disable_watch_dog
 .extern memsetup
-.extern disable_watch_dog
 .extern kernel_main
+
+// 直接在这里就把IRQ中断处理函数写进去
+.extern irq_handler
 
 _start:
 // 0x00：直接重启
@@ -30,9 +32,9 @@ HandleDataAbort:
 HandleNotUsed:
     b   HandleNotUsed
 
-// 0x18: 中断异常处理
+// 0x18: 中断异常处理，直接改成跳转我们写好的中断处理函数
 HandleIRQ:
-    b   HandleIRQ
+    b   irq_handler
 
 // 0x1c: 快中断模式的向量地址
 HandleFIQ:

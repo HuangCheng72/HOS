@@ -20,6 +20,10 @@
 
 // 为了简化问题，系统中所有的中断全都是IRQ，这样就不需要处理FIQ的情况
 
+
+// 这个函数主要工作是初始化中断控制器
+void init_interrupt();
+
 // 用枚举定义两个中断状态量（用常量也行，不过枚举的在编程习惯上更好）
 enum intr_status {      // 中断状态
     INTR_OFF = 0,       // 中断关闭
@@ -30,5 +34,14 @@ enum intr_status intr_get_status(void);
 enum intr_status intr_set_status (enum intr_status);
 enum intr_status intr_enable (void);
 enum intr_status intr_disable (void);
+
+// 添加中断处理函数，参数为中断号，中断处理函数
+bool add_interrupt_handler(uint32_t interrupt_id, void (*handler)(void));
+// 删除中断处理函数，参数为中断号
+bool remove_interrupt_handler(uint32_t interrupt_id);
+// 启用指定的中断
+void enable_gic_irq_interrupt(uint8_t irq);
+// 禁用指定的中断
+void disable_gic_irq_interrupt(uint8_t irq);
 
 #endif //HOS_INTERRUPT_H
