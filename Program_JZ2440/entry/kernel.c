@@ -3,6 +3,7 @@
 //
 
 #include "../lib/lib_kernel/lib_kernel.h"
+#include "../kernel/kernel_page/kernel_page.h"
 
 /*GPIO registers*/
 #define GPBCON              (*(volatile unsigned long *)0x56000010)
@@ -56,7 +57,15 @@ void uart0_init(void) {
 
 void kernel_main(void) {
     uart0_init();   // 波特率115200，8N1(8个数据位，无校验位，1个停止位)
-    put_str("123456HOS_KERNEL\n");
+    // 内存分页初始化
+    init_paging();
+    // 重新加载内核栈
+    switch_sp(0xc0007000);
+
+    // 测试分页后能不能用
+    *((uint32_t *)0x30004000) = 0xabcd;
+    put_int(*((uint32_t *)0xc0004000));
+    put_char('\n');
 
     for(;;);
 }
