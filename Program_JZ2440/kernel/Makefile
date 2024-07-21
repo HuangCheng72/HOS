@@ -14,8 +14,8 @@ DEVICE_DIR = kernel_device
 KERNEL_OBJS = $(KERNEL_DIR)/kernel_page.o \
 				$(KERNEL_DIR)/kernel_task.o \
 				$(KERNEL_DIR)/kernel_memory.o \
-				$(KERNEL_DIR)/kernel_interrupt.o
-#				$(KERNEL_DIR)/kernel_buffer.o \
+				$(KERNEL_DIR)/kernel_interrupt.o \
+				$(KERNEL_DIR)/kernel_buffer.o
 #				$(KERNEL_DIR)/kernel_device.o
 
 # C 编译标志
