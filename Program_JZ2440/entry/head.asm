@@ -1,5 +1,4 @@
-// 这里就是初始化的地方，设置中断向量表和初始化操作，并进入内核
-.text
+.section .text.startup
 
 .global _start
 .extern disable_watch_dog

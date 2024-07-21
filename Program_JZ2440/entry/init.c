@@ -14,11 +14,13 @@
 #define WTCNT   (*(volatile uint32_t *)0x53000008)
 
 // 关掉看门狗，不然看门狗会让板子直接重启
+void disable_watch_dog(void) __attribute__((section(".text.startup")));
 void disable_watch_dog(void) {
     WTCON = 0;  // 关闭看门狗，往这个寄存器写0即可
 }
 
 // 设置存储控制器，才能使用SDRAM
+void memsetup(void) __attribute__((section(".text.startup")));
 void memsetup(void) {
     volatile uint32_t *p = (volatile uint32_t *)(0x48000000);
 
@@ -45,6 +47,7 @@ void memsetup(void) {
 }
 
 // 把4KB的这部分资源复制到SDRAM去
+void copy_steppingstone_to_sdram(void) __attribute__((section(".text.startup")));
 void copy_steppingstone_to_sdram(void) {
     uint32_t *pdwSrc  = (uint32_t *)0;
     uint32_t *pdwDest = (uint32_t *)0x30000000;
