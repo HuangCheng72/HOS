@@ -275,6 +275,8 @@ void task_block(enum task_status stat) {
                  "ldr   r12, =0xc0007fc4\n"
                  "add   r11, lr, #4\n"
                  "str   r11, [r12]\n"
+                 "ldr   r12, =0xc0008080\n"
+                 "str   sp, [r12]\n"
                  "ldr   sp, =0xc0007800\n"
     );
 
@@ -364,6 +366,8 @@ void task_yield() {
                  "ldr   r12, =0xc0007fc4\n"
                  "add   r11, lr, #4\n"
                  "str   r11, [r12]\n"
+                 "ldr   r12, =0xc0008080\n"
+                 "str   sp, [r12]\n"
                  "ldr   sp, =0xc0007800\n"
     );
 
