@@ -10,13 +10,17 @@ INTERRUPT_DIR = kernel_interrupt
 BUFFER_DIR = kernel_buffer
 DEVICE_DIR = kernel_device
 
+# 源文件
+KERNEL_C_SRC = $(KERNEL_DIR)/kernel.c
+
 # 标签标记所有的任务（输出什么文件），方便修改
 KERNEL_OBJS = $(KERNEL_DIR)/kernel_page.o \
 				$(KERNEL_DIR)/kernel_task.o \
 				$(KERNEL_DIR)/kernel_memory.o \
 				$(KERNEL_DIR)/kernel_interrupt.o \
 				$(KERNEL_DIR)/kernel_buffer.o \
-				$(KERNEL_DIR)/kernel_device.o
+				$(KERNEL_DIR)/kernel_device.o \
+				$(KERNEL_DIR)/kernel.o
 
 # C 编译标志
 CFLAGS = -ffreestanding -nostdlib -Wall -Wextra
@@ -43,6 +47,9 @@ $(KERNEL_DIR)/kernel_buffer.o:
 
 $(KERNEL_DIR)/kernel_device.o:
 	$(MAKE) -C $(DEVICE_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+
+$(KERNEL_DIR)/kernel.o: $(KERNEL_C_SRC)
+	$(GCC) $(CFLAGS) -c -o $@ $<
 
 # 清理规则
 clean:

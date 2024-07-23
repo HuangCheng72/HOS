@@ -3,9 +3,11 @@
 //
 
 #include "../lib/lib_kernel/lib_kernel.h"
-#include "../kernel/kernel_page/kernel_page.h"
-#include "../kernel/kernel_task/kernel_task.h"
-#include "../kernel/kernel_memory/kernel_memory.h"
+#include "kernel_page/kernel_page.h"
+#include "kernel_task/kernel_task.h"
+#include "kernel_interrupt/kernel_interrupt.h"
+#include "kernel_device/kernel_device.h"
+#include "../devices/console/console.h"
 
 /*GPIO registers*/
 #define GPBCON              (*(volatile unsigned long *)0x56000010)
@@ -56,6 +58,24 @@ void uart0_init(void) {
     UBRDIV0 = UART_BRD; // 波特率为115200
 }
 
+void task_test(void *args) {
+    uint32_t counter = 0;
+    for (;;) {
+        counter++;
+        console_printf("counter1 : %d\n", counter);
+        for(uint32_t i = 0; i < 4 * UINT16_MAX; i++);
+    }
+}
+
+void task_test2(void *args) {
+    uint32_t counter = 0;
+    for (;;) {
+        counter++;
+        console_printf("counter2 : %d\n", counter);
+        for(uint32_t i = 0; i < 4 * UINT16_MAX; i++);
+    }
+}
+
 
 void kernel_main(void) {
     uart0_init();   // 波特率115200，8N1(8个数据位，无校验位，1个停止位)
@@ -67,6 +87,26 @@ void kernel_main(void) {
     init_multitasking();
     // 初始化内存管理（JZ2440的内存大小是64MB，也就是0x4000000，可以直接写死）
     init_memory(0x4000000);
+    // 初始化中断管理和GIC
+    init_interrupt();
+    // 初始化设备驱动管理
+    init_all_devices();
 
-    for(;;);
+    // 创建一个任务，这个任务主要的作用是让CPU休息，进入低功耗状态
+    task_create("task_idle", 31, task_idle, NULL);
+
+    task_create("task_test", 16, task_test, NULL);
+    task_create("task_test2", 16, task_test2, NULL);
+
+    enable_gic_irq_interrupt(10);
+    // 开启IRQ中断
+    intr_enable();
+
+    for(;;) {
+        // 内核没什么事就尽量让出CPU时间给其他任务，可不敢让内核wfi
+        task_yield();
+    }
+
+    // 以防万一，退出时退出所有设备
+    exit_all_devices();
 }
