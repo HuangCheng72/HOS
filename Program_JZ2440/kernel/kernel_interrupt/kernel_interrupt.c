@@ -109,15 +109,15 @@
 #define EINTPEND            (*(volatile unsigned long *)0x560000a8)
 
 // 真正的中断处理逻辑数组（用于分发）
-// 具体数量懒得改了，反正就用那么多
-void (*interrupt_handler_functions[1020])(void) = { NULL };
+// S3C2410芯片手册上说控制器只有60个中断，还都固定好用途了
+void (*interrupt_handler_functions[60])(void) = { NULL };
 
 // 统一IRQ中断处理分发器
 void irq_interrupt_dispatcher(){
     // 读取当前中断号是哪个
     uint32_t interrupt_id = INTOFFSET;
 
-    if (interrupt_id < 1020 && interrupt_handler_functions[interrupt_id]) {
+    if (interrupt_id < 60 && interrupt_handler_functions[interrupt_id]) {
         // 如果中断处理逻辑存在，就执行
         interrupt_handler_functions[interrupt_id]();
     }
@@ -205,7 +205,7 @@ enum intr_status intr_get_status() {
 
 // 添加中断处理函数，参数为中断号，中断处理函数，中断触发方式
 bool add_interrupt_handler(uint32_t interrupt_id, void (*handler)(void)) {
-    if(interrupt_id > 1019 || handler == NULL) {
+    if(interrupt_id > 59 || handler == NULL) {
         return false;
     }
     if(interrupt_handler_functions[interrupt_id] != NULL) {
@@ -218,7 +218,7 @@ bool add_interrupt_handler(uint32_t interrupt_id, void (*handler)(void)) {
 
 // 删除中断处理函数，参数为中断号
 bool remove_interrupt_handler(uint32_t interrupt_id) {
-    if(interrupt_id > 1019) {
+    if(interrupt_id > 59) {
         return false;
     }
     interrupt_handler_functions[interrupt_id] = NULL;
