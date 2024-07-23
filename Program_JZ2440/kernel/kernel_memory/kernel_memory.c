@@ -190,8 +190,8 @@ int8_t add_page_mapping(uint32_t virtual_address, uint32_t physical_address) {
 
     // 还没有映射，直接建立映射项目
     pte->PageType = 2;
-    pte->Bufferable = 1;
-    pte->Cacheable = 1;
+    pte->Bufferable = 0;
+    pte->Cacheable = 0;
     pte->AccessPermission0 = 3;
     pte->AccessPermission1 = 3;
     pte->AccessPermission2 = 3;

@@ -17,8 +17,8 @@ void setup_page_directory() {
     // 我也实在没搞清楚它到底映射范围多大，所以扩大一点到0x600
     for(uint32_t i = 0; i < 0x600; i++) {
         page_directory[i].DescriptorType = 2;
-        page_directory[i].Bufferable = 1;
-        page_directory[i].Cacheable = 1;
+        page_directory[i].Bufferable = 0;
+        page_directory[i].Cacheable = 0;
         page_directory[i].ShouldBeOne = 1;
         page_directory[i].Domain = KERNEL_DOMAIN;
         page_directory[i].ShouldBeZero = 0;
@@ -31,8 +31,8 @@ void setup_page_directory() {
     // 1条页表放高端1MB映射
     // 从0xc0000000开始
     page_directory[0xc00].DescriptorType = 2;
-    page_directory[0xc00].Bufferable = 1;
-    page_directory[0xc00].Cacheable = 1;
+    page_directory[0xc00].Bufferable = 0;
+    page_directory[0xc00].Cacheable = 0;
     page_directory[0xc00].ShouldBeOne = 1;
     page_directory[0xc00].Domain = KERNEL_DOMAIN;
     page_directory[0xc00].ShouldBeZero = 0;
@@ -45,8 +45,8 @@ void setup_page_directory() {
     // 这样访问的地址就是0xfff00000
     // 但是注意，范围很大，有1MB，别越界
     page_directory[0xfff].DescriptorType = 2;
-    page_directory[0xfff].Bufferable = 1;
-    page_directory[0xfff].Cacheable = 1;
+    page_directory[0xfff].Bufferable = 0;
+    page_directory[0xfff].Cacheable = 0;
     page_directory[0xfff].ShouldBeOne = 1;
     page_directory[0xfff].Domain = KERNEL_DOMAIN;
     page_directory[0xfff].ShouldBeZero = 0;
