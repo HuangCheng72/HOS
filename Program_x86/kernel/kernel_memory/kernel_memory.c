@@ -27,17 +27,15 @@
 // 管理4G内存时位图占据的内存最大长度（128KB）
 #define GLOBAL_BITMAP_PHYSICAL_BYTE_LENGTH 0x20000
 
-// 内核虚拟地址起点（1MB以下全部被内核使用了，无法再用做堆内存了）
-#define KERNEL_VIRTUAL_ADDR_START 0xc0100000
+// 内核虚拟地址起点
+#define KERNEL_VIRTUAL_ADDR_START 0xc0000000
 // 内核虚拟地址位图基址
 #define KERNEL_BITMAP_VIRTUAL_BASE 0x123000
 // 内核只占据高端1GB的内存，所以最多只需要32KB内存就行了
 // GLOBAL_BITMAP_PHYSICAL_BYTE_LENGTH / 4 = 0x8000 即可
-// 不过需要注意的是，内核虚拟内存基址是0xc0100000，多了1MB
-// 干脆只按照512MB来算吧，那只需要0x4000足够了
-#define KERNEL_BITMAP_VIRTUAL_BYTE_LENGTH 0x4000
+#define KERNEL_BITMAP_VIRTUAL_BYTE_LENGTH 0x8000
 
-// 全局物理内存位图，结构在0x9f400处
+// 全局物理内存位图，结构在0x9f800处
 BitMap *global_bitmap_physical_memory = (BitMap *)GLOBAL_BITMAP_PHYSICAL_ADDR;
 
 
@@ -72,12 +70,13 @@ typedef union {
 void init_memory(uint32_t total_physical_memory) {
     // 物理地址位图，一页是一位，一字节8位
     global_bitmap_physical_memory->bits = (uint8_t *)GLOBAL_BITMAP_PHYSICAL_BASE;
-    // 这里做个临时修改，把最后的16MB留出给ramdisk，其他的就是给内存管理自由发挥
-    global_bitmap_physical_memory->btmp_bytes_len = (total_physical_memory - 0x01000000) / PG_SIZE / 8;
+    global_bitmap_physical_memory->btmp_bytes_len = (total_physical_memory) / PG_SIZE / 8;
     bitmap_init(global_bitmap_physical_memory);
     // 物理地址上已经占据了的置为1
     // 低端1MB全部被内核占据了，还有页表和页目录表、位图
-    bitmap_set_range(global_bitmap_physical_memory, 0, 0x12a000 / PG_SIZE, 1);
+    bitmap_set_range(global_bitmap_physical_memory, 0, KERNEL_PHYSICAL_ADDR_START / PG_SIZE, 1);
+    // 这里做个临时修改，把最后的16MB留出给ramdisk，其他的就是给内存管理自由发挥
+    bitmap_set_range(global_bitmap_physical_memory, 0x03000000, 0x01000000 / PG_SIZE, 1);
 
     // 虚拟地址管理的设置（内核虚拟地址写在线程的TCB里面）
     KERNEL_TCB->process_virtual_address.virtual_addr_start = KERNEL_VIRTUAL_ADDR_START;
@@ -86,6 +85,8 @@ void init_memory(uint32_t total_physical_memory) {
     // 内核虚拟地址上限
     KERNEL_TCB->process_virtual_address.bitmap_virtual_memory.btmp_bytes_len = KERNEL_BITMAP_VIRTUAL_BYTE_LENGTH;
     bitmap_init(&KERNEL_TCB->process_virtual_address.bitmap_virtual_memory);
+    // 内核虚拟位图初始已经占据1MB
+    bitmap_set_range(&KERNEL_TCB->process_virtual_address.bitmap_virtual_memory, 0, 0x100000 / PG_SIZE ,1);
 }
 
 // 获取一个物理页

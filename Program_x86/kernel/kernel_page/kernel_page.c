@@ -55,8 +55,9 @@ void setup_page_directory(page_directory_entry_t* page_directory) {
 
     // 添加新的页表，映射48MB到64MB的物理内存到0xA0000000处（用于虚拟设备ramdisk）
     // 由于需要映射ramdisk设备的内存，需要建立4页的页表。
-    // 怕冲突其他的，所以塞在0x122000之后，0x130000之前，又不干涉内核虚拟位图（内核虚拟位图从0x122000开始连续8页），所以起点为0x12a000，满四页正好到0x12efff
-    page_table_entry_t* ramdisk_page_table = (page_table_entry_t*)0x12a000;
+    // 怕冲突其他的，所以塞在0x123000之后，0x130000之前，又不干涉内核虚拟位图，内核虚拟位图起点是0x123000，共计8页
+    // 所以以0x12b000为页表起点，共计四页，正好占据到0x12dfff
+    page_table_entry_t* ramdisk_page_table = (page_table_entry_t*)0x12b000;
     for (int i = 0; i < 4096; ++i) { // 16MB / 4KB = 4096 个页表项，一个页表项4字节，需要4页
         ramdisk_page_table[i].present = 1;     // 页表项存在
         ramdisk_page_table[i].rw = 1;          // 页表项可读写
@@ -69,7 +70,7 @@ void setup_page_directory(page_directory_entry_t* page_directory) {
         page_directory[640 + i].present = 1;     // 页目录表项存在
         page_directory[640 + i].rw = 1;          // 页目录表项可读写
         page_directory[640 + i].us = 0;          // 页目录表项为超级用户权限
-        page_directory[640 + i].table = ((0x12a000 + i * 0x1000) >> 12); // 页表地址
+        page_directory[640 + i].table = ((0x12b000 + i * 0x1000) >> 12); // 页表地址
     }
 }
 
