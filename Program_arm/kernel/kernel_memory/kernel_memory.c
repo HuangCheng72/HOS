@@ -26,9 +26,7 @@
 #define KERNEL_BITMAP_VIRTUAL_BASE 0x40124000
 // 内核只占据高端1GB的内存，所以最多只需要32KB内存就行了
 // GLOBAL_BITMAP_PHYSICAL_BYTE_LENGTH / 4 = 0x8000 即可
-// 之前在x86中，因为多了1MB的问题，就把内核虚拟地址大小缩减到了512MB
-// 可以直接设置为已经占据，这样起算就方便了
-#define KERNEL_BITMAP_VIRTUAL_BYTE_LENGTH 0x4000
+#define KERNEL_BITMAP_VIRTUAL_BYTE_LENGTH 0x8000
 
 // 全局物理内存位图，结构在0x9f800处
 BitMap *global_bitmap_physical_memory = (BitMap *)GLOBAL_BITMAP_PHYSICAL_ADDR;
