@@ -76,17 +76,6 @@ void init_paging() {
     // 设置页目录表
     setup_page_directory();
 
-    // 先禁用MMU
-    // 获取当前SCTLR寄存器值
-    SCTLR_t sctlr;
-    get_sctlr(&sctlr);
-    // 禁用MMU
-    sctlr.M = 0; // 禁用MMU
-    sctlr.A = 0; // 禁用对齐检查
-    sctlr.C = 0; // 禁用数据缓存
-    // 更新SCTLR寄存器
-    set_sctlr(&sctlr);
-
     // 域控制器设置
     DACR_t dacr;
     memset(&dacr, 0, sizeof(DACR_t));
@@ -115,12 +104,4 @@ void init_paging() {
 
     // 无效化TLB
     invalidate_tlbs();
-
-    // 启用MMU
-    get_sctlr(&sctlr);
-    sctlr.M = 1; // 启用MMU
-    sctlr.A = 1; // 启用对齐检查
-    sctlr.C = 1; // 启用数据缓存
-    // 更新SCTLR寄存器
-    set_sctlr(&sctlr);
 }

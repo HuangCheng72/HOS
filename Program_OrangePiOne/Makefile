@@ -19,8 +19,8 @@ LIB_DIR = lib
 DEVICE_DIR = devices
 FS_DIR = fs
 
-# ARM需要的中间文件
-KERNEL_ELF = $(KERNEL_DIR)/kernel.elf
+# ARM需要的中间文件（现在不是中间文件了，是主要文件了）
+KERNEL_ELF = kernel.elf
 
 # 输出文件
 KERNEL_BIN = kernel.bin
@@ -28,8 +28,8 @@ KERNEL_BIN = kernel.bin
 # 链接脚本位置
 KERNEL_LINKER_SCRIPT = $(KERNEL_DIR)/kernel_linker.ld
 
-# 链接标志
-LDFLAGS = -T $(KERNEL_LINKER_SCRIPT)
+# 链接标志（指定为32位arm的elf格式）
+LDFLAGS = -T $(KERNEL_LINKER_SCRIPT) -m armelf
 
 .PHONY: all
 
