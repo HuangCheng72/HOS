@@ -4,6 +4,9 @@
 
 #include "../lib/lib_kernel/lib_kernel.h"
 #include "../kernel/kernel_page/kernel_page.h"
+#include "../kernel/kernel_task/kernel_task.h"
+#include "../kernel/kernel_memory/kernel_memory.h"
+#include "../kernel/kernel_interrupt/kernel_interrupt.h"
 
 void kernel_main(void) {
     // 页表初始化
@@ -37,11 +40,14 @@ void kernel_main(void) {
 
     // 加载内核栈
     switch_sp(0xc0007000);
-
-    // 查看是否分页成功
-    *((uint32_t *)0x40004000) = 0x12345678;
-    put_int(*((uint32_t *)0xc0004000));
-    put_char('\n');
+    // 初始化task
+    init_multitasking();
+    // 初始化内存管理（本来这里应该从环境里面获取内存大小，我懒，直接写死了算了）
+    init_memory(0x20000000);
+    // 初始化中断管理和GIC
+    init_interrupt();
+    // 初始化设备驱动管理
+    init_all_devices();
 
     for(;;);
 }
