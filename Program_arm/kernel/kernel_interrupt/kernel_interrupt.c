@@ -35,7 +35,9 @@
 #define GICD_ITARGETSR ((volatile uint8_t *)(GIC_DIST_BASE + 0x800))
 
 // GICD_ICFGR：中断触发方式寄存器
-// 这个寄存器用于指定中断触发方式，每个比特位表示一种中断的触发方式，0为电平触发（Level Triggered，保持一定的电平值期间触发），1为边缘触发（Edge Triggered，电平变化触发）。
+// 这个寄存器用于指定中断触发方式，每2个比特位表示一种中断的触发方式，0为电平触发（Level Triggered，保持一定的电平值期间触发），2为边缘触发（Edge Triggered，电平变化触发）。
+// 之前搞错了，现在明确，两个比特位确定一个中断触发方式，根据Arm官方文档，0b00是电平触发，0b10是边缘触发。文档地址如下：
+// https://developer.arm.com/documentation/ddi0601/2022-09/External-Registers/GICD-ICFGR-n---Interrupt-Configuration-Registers?lang=en
 #define GICD_ICFGR ((volatile uint8_t *)(GIC_DIST_BASE + 0xc00))
 
 // GICC_CTLR：GIC CPU接口控制寄存器
@@ -264,18 +266,20 @@ bool add_interrupt_handler(uint32_t interrupt_id, void (*handler)(void), uint8_t
     }
     interrupt_handler_functions[interrupt_id] = handler;
     // 然后修改触发方式
-    // 找相应的位
-    uint32_t reg_idx = interrupt_id / 8;
-    uint32_t bit_idx = interrupt_id % 8;
+    // 找相应的位（注意，一个中断的触发方式用两个位决定）
+    uint32_t reg_idx = interrupt_id / 4;
+    uint32_t bit_idx = interrupt_id % 4;
 
     if(trigger_mode) {
         // 已经排除了大于1的问题，所以这里trigger_mode肯定是1
-        // 修改该位为1，用位或
-        GICD_ICFGR[reg_idx] |= (1 << bit_idx);
+        // 修改这两位为10，因为先前都是0，所以倒是可以不用考虑下标为偶数的位的问题
+        // 下标为偶数的位必定是0，只有下标为奇数的位才是1
+        GICD_ICFGR[reg_idx] |= (1 << (bit_idx * 2 + 1));
     } else {
         // 已经排除了大于1的问题，所以这里trigger_mode肯定是0
-        // 修改该位为0，按位取反然后位与即可
-        GICD_ICFGR[reg_idx] &= (~(1 << bit_idx));
+        // 推理方式类似上一个分支
+        // 这里主要就是清除对应的奇数位的1就行了，用按位取反后位与即可解决
+        GICD_ICFGR[reg_idx] &= (~(1 << (bit_idx * 2 + 1)));
     }
     return true;
 }
