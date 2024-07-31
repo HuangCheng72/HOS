@@ -67,7 +67,10 @@ void kernel_main(void) {
     // 允许定时器中断
     enable_gic_irq_interrupt(50);
 
-    for(;;);
+    for(;;) {
+        // 没什么事就让CPU休息
+        task_idle();
+    }
 }
 
 void task_test(void *args) {
