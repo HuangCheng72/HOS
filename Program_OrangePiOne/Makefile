@@ -48,8 +48,8 @@ compile:
 link:
 	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(wildcard $(ENTRY_DIR)/*.o) \
 										$(wildcard $(KERNEL_DIR)/*.o) \
-										$(wildcard $(LIB_DIR)/*.o)
-#										$(wildcard $(DEVICE_DIR)/*.o) \
+										$(wildcard $(LIB_DIR)/*.o) \
+										$(wildcard $(DEVICE_DIR)/*.o)
 #										$(wildcard $(FS_DIR)/*.o)
 
 # 提取二进制文件kernel.bin

@@ -7,6 +7,12 @@
 #include "../kernel/kernel_task/kernel_task.h"
 #include "../kernel/kernel_memory/kernel_memory.h"
 #include "../kernel/kernel_interrupt/kernel_interrupt.h"
+#include "../kernel/kernel_device/kernel_device.h"
+
+#include "../devices/console/console.h"
+
+void task_test(void *args);
+void task_test2(void *args);
 
 void kernel_main(void) {
     // 页表初始化
@@ -49,5 +55,35 @@ void kernel_main(void) {
     // 初始化设备驱动管理
     init_all_devices();
 
+    // 这里需要清除一下0xc0008080处的值
+    // 搞不明白这里哪来的值，难道是上电初始化不为0？还是u-boot把这地方写了？
+    *((uint32_t *)0xc0008080) = 0;
+
+    task_create("task_test", 31, task_test, NULL);
+    task_create("task_test2", 31, task_test2, NULL);
+
+    // 开启IRQ中断
+    intr_enable();
+    // 允许定时器中断
+    enable_gic_irq_interrupt(50);
+
     for(;;);
+}
+
+void task_test(void *args) {
+    uint32_t counter = 0;
+    for (;;) {
+        counter++;
+        console_printf("counter1 : %d\n", counter);
+        for(uint32_t i = 0; i < 16 * UINT16_MAX; i++);
+    }
+}
+
+void task_test2(void *args) {
+    uint32_t counter = 0;
+    for (;;) {
+        counter++;
+        console_printf("counter2 : %d\n", counter);
+        for(uint32_t i = 0; i < 16 * UINT16_MAX; i++);
+    }
 }
