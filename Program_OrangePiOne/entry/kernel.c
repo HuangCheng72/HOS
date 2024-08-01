@@ -11,8 +11,7 @@
 
 #include "../devices/console/console.h"
 
-void task_test(void *args);
-void task_test2(void *args);
+void led_blink_test(void *args);
 
 void kernel_main(void) {
     // 页表初始化
@@ -59,8 +58,7 @@ void kernel_main(void) {
     // 搞不明白这里哪来的值，难道是上电初始化不为0？还是u-boot把这地方写了？
     *((uint32_t *)0xc0008080) = 0;
 
-    task_create("task_test", 31, task_test, NULL);
-    task_create("task_test2", 31, task_test2, NULL);
+    task_create("led_blink_test", 31, led_blink_test, NULL);
 
     // 开启IRQ中断
     intr_enable();
@@ -73,20 +71,34 @@ void kernel_main(void) {
     }
 }
 
-void task_test(void *args) {
-    uint32_t counter = 0;
-    for (;;) {
-        counter++;
-        console_printf("counter1 : %d\n", counter);
-        for(uint32_t i = 0; i < 16 * UINT16_MAX; i++);
+void led_blink_test(void *args) {
+    // 获取LED驱动指针
+    struct driver *led_driver = get_driver("led");
+    if (led_driver == NULL) {
+        // 处理未找到驱动的错误
+        return;
     }
-}
 
-void task_test2(void *args) {
-    uint32_t counter = 0;
-    for (;;) {
-        counter++;
-        console_printf("counter2 : %d\n", counter);
-        for(uint32_t i = 0; i < 16 * UINT16_MAX; i++);
+    // 参数结构体
+    struct led_io_request {
+        uint32_t led;       // LED类型：绿色LED或红色LED
+        uint32_t action;    // 动作：开或关
+    };
+
+    struct led_io_request green_led_on = {0, 1};
+    struct led_io_request green_led_off = {0, 0};
+    struct led_io_request red_led_on = {1, 1};
+    struct led_io_request red_led_off = {1, 0};
+
+    for(;;) {
+        // 打开绿色LED，关闭红色LED
+        device_write(led_driver, (char *)&green_led_on, sizeof(green_led_on));
+        device_write(led_driver, (char *)&red_led_off, sizeof(red_led_off));
+        for(uint32_t i = 0; i < 8 * UINT16_MAX; i++); // 延时一段时间
+
+        // 关闭绿色LED，打开红色LED
+        device_write(led_driver, (char *)&green_led_off, sizeof(green_led_off));
+        device_write(led_driver, (char *)&red_led_on, sizeof(red_led_on));
+        for(uint32_t i = 0; i < 8 * UINT16_MAX; i++); // 延时一段时间
     }
 }
