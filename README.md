@@ -80,7 +80,7 @@ HOS项目是根据《30天自制操作系统》和《操作系统真象还原》
 
 [（33）移植内存管理和多任务（部分成功）](./Documents/（33）移植内存管理和多任务（部分成功）.md)
 
-[（34）移植到Orange Pi One上](./Documents/（34）移植到Orange Pi One上.md)
+[（34）移植到Orange Pi One上](./Documents/（34）移植到Orange%20Pi%20One上.md)
 
 [（35）解决内存分页问题并继续移植](./Documents/（35）解决内存分页问题并继续移植.md)
 
