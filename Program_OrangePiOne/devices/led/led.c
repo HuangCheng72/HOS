@@ -9,7 +9,7 @@
 
 // GPIO寄存器定义
 #define GPIO_BASE 0x01F02C00
-#define GPIO_A_BASE 0x01C20800  //
+#define GPIO_A_BASE 0x01C20800
 #define GPIO_L_BASE 0x01F02C00
 
 #define GPIO_CFG_OFFSET 0x00
