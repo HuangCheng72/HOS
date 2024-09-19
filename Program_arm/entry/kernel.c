@@ -31,9 +31,6 @@ void kernel_main(void) {
     // 初始化设备驱动管理
     init_all_devices();
 
-    // 创建一个任务，这个任务主要的作用是让CPU休息，进入低功耗状态
-    task_create("task_idle", 31, task_idle, NULL);
-
     // 开启IRQ中断
     intr_enable();
 
@@ -41,8 +38,8 @@ void kernel_main(void) {
     enable_gic_irq_interrupt(30);
 
     for(;;) {
-        // 内核没什么事就尽量让出CPU时间给其他任务，可不敢让内核wfi
-        task_yield();
+        // 直接在内核主循环让CPU休息，进入低功耗状态，不用再创建任务了
+        task_idle();
     }
 
     // 以防万一，退出时退出所有设备
