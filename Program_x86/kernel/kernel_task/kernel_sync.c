@@ -147,3 +147,59 @@ void rwlock_acquire_write(struct rwlock *rw) {
 void rwlock_release_write(struct rwlock *rw) {
     semaphore_signal(&rw->write_lock);
 }
+
+// 原子级的test_and_set操作，这是实现自旋锁的基础
+uint32_t atomic_test_and_set(volatile uint32_t *ptr, uint32_t value);
+
+// 初始化自旋锁
+void spinlock_init(struct spinlock *lock) {
+    lock->locked = 0;  // 将锁状态设置为未锁定
+}
+
+// 自旋锁加锁
+void spinlock_lock(struct spinlock *lock) {
+    while (atomic_test_and_set(&lock->locked, 1)) {
+        // 自旋等待，直到锁被释放，即 lock_test_and_set 返回 0
+    }
+}
+
+// 自旋锁解锁
+void spinlock_unlock(struct spinlock *lock) {
+    lock->locked = 0;  // 释放锁，将其状态设置为未锁定
+}
+
+// 实现原子操作需要的经典CAS（compare-and-swap）函数
+uint32_t automic_cas(volatile uint32_t *ptr, uint32_t old_val, uint32_t new_val);
+
+// 初始化原子量
+void atomic_init(atomic_t *atomic, uint32_t value) {
+    atomic->value = value;
+}
+
+// 获取原子量的值
+uint32_t atomic_get(atomic_t *atomic) {
+    return atomic->value;
+}
+
+// 设置原子量的值并返回原来的值（所以直接用经典test_and_set就行了）
+uint32_t atomic_set(atomic_t *atomic, uint32_t value) {
+    return atomic_test_and_set(&atomic->value, value);
+}
+
+void atomic_add(atomic_t *atomic, uint32_t value) {
+    uint32_t old_val, new_val;
+    do {
+        old_val = atomic->value;          // 获取当前值
+        new_val = old_val + value;        // 计算新值
+        // 调用automic_cas，确保比较并交换是原子的
+    } while (automic_cas(&(atomic->value), old_val, new_val) != old_val);
+}
+
+void atomic_sub(atomic_t *atomic, uint32_t value) {
+    uint32_t old_val, new_val;
+    do {
+        old_val = atomic->value;          // 获取当前值
+        new_val = old_val - value;        // 计算新值
+        // 调用automic_cas，确保比较并交换是原子的
+    } while (automic_cas(&(atomic->value), old_val, new_val) != old_val);
+}

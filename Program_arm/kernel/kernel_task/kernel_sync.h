@@ -65,4 +65,32 @@ void rwlock_acquire_write(struct rwlock *rw);
 // 释放写锁
 void rwlock_release_write(struct rwlock *rw);
 
+// 自旋锁结构
+struct spinlock {
+    volatile uint32_t locked;    // 锁的状态，0 表示未锁定，1 表示锁定
+};
+
+// 初始化自旋锁
+void spinlock_init(struct spinlock *lock);
+// 自旋锁加锁
+void spinlock_lock(struct spinlock *lock);
+// 自旋锁解锁
+void spinlock_unlock(struct spinlock *lock);
+
+// 原子量结构体
+typedef struct {
+    volatile uint32_t value;  // 原子量的值
+} atomic_t;
+
+// 初始化原子量
+void atomic_init(atomic_t *atomic, uint32_t value);
+// 获取原子量的值
+uint32_t atomic_get(atomic_t *atomic);
+// 设置原子量的值并返回原来的值
+uint32_t atomic_set(atomic_t *atomic, uint32_t value);
+// 原子加法操作
+void atomic_add(atomic_t *atomic, uint32_t value);
+// 原子减法操作
+void atomic_sub(atomic_t *atomic, uint32_t value);
+
 #endif //HOS_KERNEL_SYNC_H
