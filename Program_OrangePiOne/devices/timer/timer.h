@@ -17,6 +17,9 @@ void interrupt_handler_timer();
 // ticks是内核自中断开启以来总共的嘀嗒数
 extern uint32_t total_ticks;
 
-void timer_init ( int hz );
+// 设置 timer1 延时（微秒）
+void set_timer1_delay_us(uint32_t us);
+// 检查 timer1 是否完成倒计时
+bool is_timer1_done();
 
 #endif //HOS_TIMER_H
