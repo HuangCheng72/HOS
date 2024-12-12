@@ -209,7 +209,7 @@ void init_timer() {
     TMR1_CTRL_REG_t *timer1_ctrl = (TMR1_CTRL_REG_t *)TMR1_CTRL_REG;
 
     timer1_ctrl->TMR1_RELOAD = 0;           // 启用重装载（因为是用于计时，每次都不一样，所以不可能重装载）
-    timer1_ctrl->TMR1_CLK_SRC = 0;          // 设置时钟源为 24 MHz源
+    timer1_ctrl->TMR1_CLK_SRC = 1;          // 设置时钟源为 24 MHz源
     timer1_ctrl->TMR1_CLK_PRES = 0;         // 不进行预分频
     timer1_ctrl->TMR1_MODE = 1;             // 设置为单次模式（因为是用于计时，每次都不一样，所以不可能设置为连续模式）
 
