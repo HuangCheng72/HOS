@@ -19,7 +19,5 @@ extern void load_page_directory(uint32_t page_directory_addr);
 extern uint32_t get_current_page(void);
 // 切换栈指针
 extern void switch_sp(uint32_t new_sp);
-// 延迟给定纳秒数
-extern void delay(uint32_t us);
 
 #endif //HOS_LIB_H
