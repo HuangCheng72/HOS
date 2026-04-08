@@ -7,4 +7,6 @@
 
 #include "../../lib/lib_kernel/lib_kernel.h"
 
+void ccu_init(void);
+
 #endif //HOS_CCU_H

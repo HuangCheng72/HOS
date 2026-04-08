@@ -27,97 +27,56 @@ struct sunxi_gpio {
     volatile uint32_t pull[2];
 };
 
+static struct sunxi_gpio *get_gpio_group(char group) {
+    switch (group) {
+        case 'A': return (struct sunxi_gpio *)SUNXI_GPIO_A_BASE;
+        case 'B': return (struct sunxi_gpio *)SUNXI_GPIO_B_BASE;
+        case 'C': return (struct sunxi_gpio *)SUNXI_GPIO_C_BASE;
+        case 'D': return (struct sunxi_gpio *)SUNXI_GPIO_D_BASE;
+        case 'E': return (struct sunxi_gpio *)SUNXI_GPIO_E_BASE;
+        case 'F': return (struct sunxi_gpio *)SUNXI_GPIO_F_BASE;
+        case 'G': return (struct sunxi_gpio *)SUNXI_GPIO_G_BASE;
+        case 'L': return (struct sunxi_gpio *)SUNXI_GPIO_L_BASE;
+        default: return NULL;
+    }
+}
+
 // 初始化函数
 void gpio_init(void) {
-    // u-boot已经初始化了，别乱动，串口通信也是过GPIO的，乱动就没法用串口通信了
-    // 这部分如果要做初始化，参考如下代码
-
-    /*
-    struct sunxi_gpio *gpio_group;
-
-    // 处理 A 到 G 组
-    for (int group = 0; group < 7; group++) {
-        gpio_group = (struct sunxi_gpio *)(SUNXI_GPIO_A_BASE + group * 0x24);
-
-        // 配置所有引脚为输出模式
-        for (int i = 0; i < 4; i++) {           // 每个寄存器由4位配置
-            gpio_group->cfg[i] = 0x11111111;    // 4 个 cfg 寄存器，每个引脚都配置为输出模式
-        }
-
-        // 设置所有引脚为低电平
-        gpio_group->dat = 0x00000000;
-    }
-
-    // 处理 L 组
-    gpio_group = (struct sunxi_gpio *)SUNXI_GPIO_L_BASE;
-
-    // 配置所有引脚为输出模式
-    for (int i = 0; i < 4; i++) {
-        gpio_group->cfg[i] = 0x11111111;        // 4 个 cfg 寄存器，每个引脚都配置为输出模式
-    }
-
-    // 设置所有引脚为低电平
-    gpio_group->dat = 0x00000000;
-
-     */
-
-    // 初始化为输入模式的话，要设置上拉电阻或者下拉电阻，我这边暂时用不到就没设置
+    // GPIO 属于 PIO，总线时钟由 CCU 控制，这里做最小可用初始化
+    // 同时会保证 UART0 相关时钟可用，避免串口和GPIO依赖顺序问题
+    // ccu_init由驱动管理框架自动运行
 }
 
 // 退出函数
 void gpio_exit(void) {
-    struct sunxi_gpio *gpio_group;
-
-    // 处理 A 到 G 组
-    for (int group = 0; group < 7; group++) {
-        gpio_group = (struct sunxi_gpio *)(SUNXI_GPIO_A_BASE + group * 0x24);
-
-        // 清除所有配置，恢复默认状态
-        for (int i = 0; i < 4; i++) {
-            gpio_group->cfg[i] = 0x00000000;    // 清除配置
-        }
-    }
-
-    // 处理 L 组
-    gpio_group = (struct sunxi_gpio *)SUNXI_GPIO_L_BASE;
-
-    // 清除所有配置，恢复默认状态
-    for (int i = 0; i < 4; i++) {
-        gpio_group->cfg[i] = 0x00000000;        // 清除配置
-    }
+    // 不做“清空所有GPIO配置”的破坏性操作，保留原样等待关机
 }
 
 // GPIO读入（注意，需要设置上拉电阻和下拉电阻，防止抖动）
 int32_t gpio_read(char *args, uint32_t args_size) {
-    if (args_size != sizeof(struct gpio_request)) {
+    if (args == NULL || args_size != sizeof(struct gpio_request)) {
         return -1;
     }
 
     struct gpio_request *request = (struct gpio_request *)args;
 
-    // 确定 GPIO 组的基地址
-    uint32_t group_base;
-    switch (request->group) {
-        case 'A': group_base = SUNXI_GPIO_A_BASE; break;
-        case 'B': group_base = SUNXI_GPIO_B_BASE; break;
-        case 'C': group_base = SUNXI_GPIO_C_BASE; break;
-        case 'D': group_base = SUNXI_GPIO_D_BASE; break;
-        case 'E': group_base = SUNXI_GPIO_E_BASE; break;
-        case 'F': group_base = SUNXI_GPIO_F_BASE; break;
-        case 'G': group_base = SUNXI_GPIO_G_BASE; break;
-        case 'L': group_base = SUNXI_GPIO_L_BASE; break;
-        default: return -1; // 非法的组号
+    if (request->pin >= 32) {
+        return -1;
     }
 
-    struct sunxi_gpio *gpio_group = (struct sunxi_gpio *)group_base;
+    struct sunxi_gpio *gpio_group = get_gpio_group(request->group);
+    if (gpio_group == NULL) {
+        return -1;
+    }
 
     // 检查当前引脚是否为输入模式，否则更改为输入模式
     uint32_t cfg_reg = gpio_group->cfg[request->pin / 8];
-    int shift = (request->pin % 8) * 4;
-    uint32_t mode = (cfg_reg >> shift) & 0x7;
+    uint32_t shift = (request->pin % 8) * 4;
+    uint32_t mode = (cfg_reg >> shift) & 0xf;
 
     if (mode != 0) {  // 0表示输入模式
-        cfg_reg &= ~(0x7 << shift);
+        cfg_reg &= ~(0xf << shift);
         gpio_group->cfg[request->pin / 8] = cfg_reg;
     }
 
@@ -129,35 +88,28 @@ int32_t gpio_read(char *args, uint32_t args_size) {
 
 // GPIO写出
 int32_t gpio_write(char *args, uint32_t args_size) {
-    if (args_size != sizeof(struct gpio_request)) {
+    if (args == NULL || args_size != sizeof(struct gpio_request)) {
         return -1;
     }
 
     struct gpio_request *request = (struct gpio_request *)args;
 
-    // 确定 GPIO 组的基地址
-    uint32_t group_base;
-    switch (request->group) {
-        case 'A': group_base = SUNXI_GPIO_A_BASE; break;
-        case 'B': group_base = SUNXI_GPIO_B_BASE; break;
-        case 'C': group_base = SUNXI_GPIO_C_BASE; break;
-        case 'D': group_base = SUNXI_GPIO_D_BASE; break;
-        case 'E': group_base = SUNXI_GPIO_E_BASE; break;
-        case 'F': group_base = SUNXI_GPIO_F_BASE; break;
-        case 'G': group_base = SUNXI_GPIO_G_BASE; break;
-        case 'L': group_base = SUNXI_GPIO_L_BASE; break;
-        default: return -1; // 非法的组号
+    if (request->pin >= 32) {
+        return -1;
     }
 
-    struct sunxi_gpio *gpio_group = (struct sunxi_gpio *)group_base;
+    struct sunxi_gpio *gpio_group = get_gpio_group(request->group);
+    if (gpio_group == NULL) {
+        return -1;
+    }
 
     // 检查当前引脚是否为输出模式，否则更改为输出模式
     uint32_t cfg_reg = gpio_group->cfg[request->pin / 8];
-    int shift = (request->pin % 8) * 4;
-    uint32_t mode = (cfg_reg >> shift) & 0x7;
+    uint32_t shift = (request->pin % 8) * 4;
+    uint32_t mode = (cfg_reg >> shift) & 0xF;
 
     if (mode != 1) {  // 1表示输出模式
-        cfg_reg &= ~(0x7 << shift);
+        cfg_reg &= ~(0xf << shift);
         cfg_reg |= (0x1 << shift);
         gpio_group->cfg[request->pin / 8] = cfg_reg;
     }
