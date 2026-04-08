@@ -17,7 +17,7 @@ ENTRY_DIR = entry
 KERNEL_DIR = kernel
 LIB_DIR = lib
 DEVICE_DIR = devices
-FS_DIR = fs
+#FS_DIR = fs
 
 # ARM需要的中间文件（现在不是中间文件了，是主要文件了）
 KERNEL_ELF = kernel.elf
@@ -42,7 +42,7 @@ compile:
 	$(MAKE) -C $(LIB_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(KERNEL_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 	$(MAKE) -C $(DEVICE_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
-	$(MAKE) -C $(FS_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+#	$(MAKE) -C $(FS_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 
 # 链接生成 kernel.elf
 link:
@@ -61,4 +61,4 @@ clean:
 	$(MAKE) -C $(KERNEL_DIR) clean
 	$(MAKE) -C $(LIB_DIR) clean
 	$(MAKE) -C $(DEVICE_DIR) clean
-	$(MAKE) -C $(FS_DIR) clean
+#	$(MAKE) -C $(FS_DIR) clean
