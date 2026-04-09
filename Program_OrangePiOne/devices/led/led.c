@@ -4,62 +4,52 @@
 
 #include "led.h"
 
-#include "led.h"
+#include "../gpio/gpio.h"
+
 #include "../../kernel/kernel_device/kernel_device.h"
 
-// GPIO寄存器定义
-#define GPIO_BASE 0x01F02C00
-#define GPIO_A_BASE 0x01C20800
-#define GPIO_L_BASE 0x01F02C00
-
-#define GPIO_CFG_OFFSET 0x00
-#define GPIO_DATA_OFFSET 0x10
-
-// GPIO端口配置和数据寄存器
-#define GPIO_CFG(port) ((volatile uint32_t *)(port + GPIO_CFG_OFFSET))
-#define GPIO_DATA(port) ((volatile uint32_t *)(port + GPIO_DATA_OFFSET))
-
-static int green_led_status = 0;
-static int red_led_status = 0;
-
 void led_init(void) {
-    // 配置GPIO L10 为输出模式
-    volatile uint32_t *gpio_l_cfg = GPIO_CFG(GPIO_L_BASE);
-    *gpio_l_cfg &= ~(0xF << 20);    // 清除第10个引脚的配置
-    *gpio_l_cfg |= (1 << 20);       // 设置为输出模式
-
-    // 配置GPIO A15 为输出模式
-    volatile uint32_t *gpio_a_cfg = GPIO_CFG(GPIO_A_BASE);
-    *gpio_a_cfg &= ~(0xF << 28);    // 清除第15个引脚的配置
-    *gpio_a_cfg |= (1 << 28);       // 设置为输出模式
-
-    // 初始化为低电平
-    volatile uint32_t *gpio_l_data = GPIO_DATA(GPIO_L_BASE);
-    *gpio_l_data &= ~(1 << 10);
-
-    volatile uint32_t *gpio_a_data = GPIO_DATA(GPIO_A_BASE);
-    *gpio_a_data &= ~(1 << 15);
+    // LED驱动是GPIO驱动套壳，所以不需要初始化，等GPIO初始化
 }
 
 void led_exit(void) {
-    // 关闭LED
-    volatile uint32_t *gpio_l_data = GPIO_DATA(GPIO_L_BASE);
-    *gpio_l_data &= ~(1 << 10);
-
-    volatile uint32_t *gpio_a_data = GPIO_DATA(GPIO_A_BASE);
-    *gpio_a_data &= ~(1 << 15);
+    // LED驱动是GPIO驱动套壳，所以不需要退出，等GPIO退出
 }
 
+// read和write操作对象是led_io_request的实例
+
 int32_t led_read(char *args, uint32_t args_size) {
-    if(args_size != sizeof(struct led_io_request)) {
+    if(args == NULL || args_size != sizeof(struct led_io_request)) {
         return -1;
     }
+
+    // 获取GPIO驱动指针
+    struct driver *gpio_driver = get_driver("gpio");
+    if (gpio_driver == NULL) {
+        // 未找到GPIO驱动
+        return -1;
+    }
+
     struct led_io_request *request = (struct led_io_request *)args;
 
+    struct gpio_request led_status = {};     // GPIO请求，绿色LED是L组 pin10，红色LED是A组 pin15
+
     if (request->led == LED_GREEN) {
-        request->action = green_led_status;
+        led_status.group = 'L';
+        led_status.pin = 10;
+        led_status.value = 0;
+
+        device_read(gpio_driver, (char*)(&led_status), sizeof(led_status));
+
+        request->action = led_status.value;
     } else if (request->led == LED_RED) {
-        request->action = red_led_status;
+        led_status.group = 'A';
+        led_status.pin = 15;
+        led_status.value = 0;
+
+        device_read(gpio_driver, (char*)(&led_status), sizeof(led_status));
+
+        request->action = led_status.value;
     } else {
         return -1;
     }
@@ -67,29 +57,44 @@ int32_t led_read(char *args, uint32_t args_size) {
 }
 
 int32_t led_write(char *args, uint32_t args_size) {
-    if(args_size != sizeof(struct led_io_request)) {
+    if(args == NULL || args_size != sizeof(struct led_io_request)) {
         return -1;
     }
+
+    // 获取GPIO驱动指针
+    struct driver *gpio_driver = get_driver("gpio");
+    if (gpio_driver == NULL) {
+        // 未找到GPIO驱动
+        return -1;
+    }
+
     struct led_io_request *request = (struct led_io_request *)args;
 
-    volatile uint32_t *gpio_l_data = GPIO_DATA(GPIO_L_BASE);
-    volatile uint32_t *gpio_a_data = GPIO_DATA(GPIO_A_BASE);
+    // 四个状态
+
+    struct gpio_request led_status = {};     // GPIO请求，绿色LED是L组 pin10，红色LED是A组 pin15
 
     if (request->led == LED_GREEN) {
-        if (request->action) {
-            *gpio_l_data |= (1 << 10);
-            green_led_status = 1;
-        } else {
-            *gpio_l_data &= ~(1 << 10);
-            green_led_status = 0;
+        if (request->action == 0 || request->action == 1) {
+            led_status.group = 'L';
+            led_status.pin = 10;
+            led_status.value = request->action;
+
+            device_write(gpio_driver, (char *)&led_status, sizeof(led_status));
+        }
+        else {
+            return -1;
         }
     } else if (request->led == LED_RED) {
-        if (request->action) {
-            *gpio_a_data |= (1 << 15);
-            red_led_status = 1;
-        } else {
-            *gpio_a_data &= ~(1 << 15);
-            red_led_status = 0;
+        if (request->action == 0 || request->action == 1) {
+            led_status.group = 'A';
+            led_status.pin = 15;
+            led_status.value = request->action;
+
+            device_write(gpio_driver, (char *)&led_status, sizeof(led_status));
+        }
+        else {
+            return -1;
         }
     } else {
         return -1;

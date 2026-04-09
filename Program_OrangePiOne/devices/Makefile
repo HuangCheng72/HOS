@@ -5,9 +5,10 @@ TIMER_DIR = timer
 CONSOLE_DIR = console
 LED_DIR = led
 GPIO_DIR = gpio
+CCU_DIR = ccu
 
 # 标签标记所有的任务（输出什么文件），方便修改
-DEVICE_OBJS = timer.o console.o gpio.o
+DEVICE_OBJS = ccu.o timer.o console.o gpio.o led.o
 
 .PHONY: all
 
@@ -25,6 +26,9 @@ led.o:
 
 gpio.o:
 	$(MAKE) -C $(GPIO_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
+
+ccu.o:
+	$(MAKE) -C $(CCU_DIR) GCC=$(GCC) AS=$(AS) MAKE=$(MAKE)
 
 # 清理规则
 clean:

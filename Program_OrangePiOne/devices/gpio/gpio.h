@@ -13,7 +13,4 @@ struct gpio_request {
     uint8_t value;  // 用于写操作的电平值，0表示低电平，1表示高电平
 };
 
-int32_t gpio_read(char *args, uint32_t args_size);
-int32_t gpio_write(char *args, uint32_t args_size);
-
 #endif //HOS_GPIO_H

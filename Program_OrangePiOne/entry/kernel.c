@@ -10,6 +10,7 @@
 #include "../kernel/kernel_device/kernel_device.h"
 
 #include "../devices/console/console.h"
+#include "../devices/led/led.h"
 
 void led_blink_test(void *args);
 
@@ -72,34 +73,29 @@ void kernel_main(void) {
 }
 
 void led_blink_test(void *args) {
-    // 获取GPIO驱动指针
-    struct driver *gpio_driver = get_driver("gpio");
-    if (gpio_driver == NULL) {
+    // 获取LED驱动指针
+    struct driver *led_driver = get_driver("led");
+    if (led_driver == NULL) {
         // 处理未找到驱动的错误
         return;
     }
 
-    // 参数结构体
-    struct gpio_request {
-        char group;     // 组号，如 'A', 'B', 'C', ... 'L'
-        uint8_t pin;    // 针脚编号（0-31）
-        uint8_t value;  // 用于写操作的电平值，0表示低电平，1表示高电平
-    };
-
-    struct gpio_request green_led_on = {'L',10, 1};     // GPIO L10 绿色LED 开
-    struct gpio_request green_led_off = {'L',10, 0};    // GPIO L10 绿色LED 关
-    struct gpio_request red_led_on = {'A',15, 1};       // GPIO A15 红色LED 开
-    struct gpio_request red_led_off = {'A',15, 0};      // GPIO A15 红色LED 关
+    struct led_io_request green_led_on = {LED_GREEN,1};     // 绿色LED 开
+    struct led_io_request green_led_off = {LED_GREEN, 0};   // 绿色LED 关
+    struct led_io_request red_led_on = {LED_RED,1};         // 红色LED 开
+    struct led_io_request red_led_off = {LED_RED,0};        // 红色LED 关
 
     for(;;) {
+
         // 打开绿色LED，关闭红色LED
-        device_write(gpio_driver, (char *)&green_led_on, sizeof(green_led_on));
-        device_write(gpio_driver, (char *)&red_led_off, sizeof(red_led_off));
+        device_write(led_driver, (char *)&green_led_on, sizeof(green_led_on));
+
+        device_write(led_driver, (char *)&red_led_off, sizeof(red_led_off));
         for(uint32_t i = 0; i < 8 * UINT16_MAX; i++); // 延时一段时间
 
         // 关闭绿色LED，打开红色LED
-        device_write(gpio_driver, (char *)&green_led_off, sizeof(green_led_off));
-        device_write(gpio_driver, (char *)&red_led_on, sizeof(red_led_on));
+        device_write(led_driver, (char *)&green_led_off, sizeof(green_led_off));
+        device_write(led_driver, (char *)&red_led_on, sizeof(red_led_on));
         for(uint32_t i = 0; i < 8 * UINT16_MAX; i++); // 延时一段时间
     }
 }

@@ -45,7 +45,8 @@ static struct sunxi_gpio *get_gpio_group(char group) {
 void gpio_init(void) {
     // GPIO 属于 PIO，总线时钟由 CCU 控制，这里做最小可用初始化
     // 同时会保证 UART0 相关时钟可用，避免串口和GPIO依赖顺序问题
-    // ccu_init由驱动管理框架自动运行
+    // CCU_INIT 由驱动管理框架自动运行
+    // 所以 GPIO_INIT 这里暂时什么都不用做
 }
 
 // 退出函数
@@ -76,7 +77,7 @@ int32_t gpio_read(char *args, uint32_t args_size) {
     uint32_t mode = (cfg_reg >> shift) & 0xf;
 
     if (mode != 0) {  // 0表示输入模式
-        cfg_reg &= ~(0xf << shift);
+        cfg_reg &= ~(0xf << shift);         // 注释，这里是AI纠错的时候发现的，原先用0x7目的也是去清位，但是搞错了，0x7清不到最高位，用0xf才能清到最高位
         gpio_group->cfg[request->pin / 8] = cfg_reg;
     }
 
@@ -109,7 +110,7 @@ int32_t gpio_write(char *args, uint32_t args_size) {
     uint32_t mode = (cfg_reg >> shift) & 0xF;
 
     if (mode != 1) {  // 1表示输出模式
-        cfg_reg &= ~(0xf << shift);
+        cfg_reg &= ~(0xf << shift);         // 注释，这里是AI纠错的时候发现的，原先用0x7目的也是去清位，但是搞错了，0x7清不到最高位，用0xf才能清到最高位
         cfg_reg |= (0x1 << shift);
         gpio_group->cfg[request->pin / 8] = cfg_reg;
     }
