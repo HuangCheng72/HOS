@@ -10,6 +10,7 @@
 #include "../kernel/kernel_device/kernel_device.h"
 
 #include "../devices/console/console.h"
+#include "../devices/ccu/ccu.h"
 #include "../devices/led/led.h"
 
 void led_blink_test(void *args);
@@ -52,6 +53,10 @@ void kernel_main(void) {
     init_memory(0x20000000);
     // 初始化中断管理和GIC
     init_interrupt();
+
+    // 本系统在启用其他设备驱动之前，初始化CCU
+    ccu_init();
+
     // 初始化设备驱动管理
     init_all_devices();
 

@@ -38,18 +38,3 @@ void ccu_init(void) {
 
     inited = 1;
 }
-
-void ccu_exit(void) {}
-
-// 注册驱动结构体
-REGISTER_DRIVER(ccu_driver) {
-        .driver_name = "ccu",
-        .init = ccu_init,
-        .exit = ccu_exit,
-        .read = NULL,
-        .write = NULL,
-        .irq = -1, // 没有中断处理
-        .irq_interrupt_handler = NULL,
-        .need_command_buffer = 0,
-        .need_data_buffer = 0,
-};
