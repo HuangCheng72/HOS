@@ -8,7 +8,7 @@
 #include "../../lib/lib_kernel/lib_kernel.h"
 
 struct gpio_request {
-    char group;     // 组号，如 'A', 'B', 'C', ... 'L'
+    char group;     // 组号，只有这几个：A、C、D、E、F、G、L
     uint8_t pin;    // 针脚编号（0-31）
     uint8_t value;  // 用于写操作的电平值，0表示低电平，1表示高电平
 };
