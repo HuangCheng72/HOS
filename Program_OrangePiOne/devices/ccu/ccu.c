@@ -5,8 +5,6 @@
 #include "ccu.h"
 #include "ccu_datasheet.h"
 
-#include "../../kernel/kernel_device/kernel_device.h"
-
 // 最小可用 CCU 初始化：
 // 1) PIO 时钟门控（GPIO）
 // 2) UART0 APB2 时钟源/分频

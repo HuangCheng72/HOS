@@ -4,17 +4,25 @@
 
 #include "timer.h"
 
-#include "../../kernel/kernel_device/kernel_device.h"
+#include "../../kernel/kernel_device/kernel_device_common.h"
 #include "../../kernel/kernel_task/kernel_task.h"
+
+// 定时器需要一个IRQ
+static struct driver_irq_descriptor timer_irq[1] = {{
+        .irq = 50,              // 根据Allwinner_H3_Datasheet_v1.2.pdf，page 207，Timer 0的中断号是50
+        .irq_interrupt_handler = interrupt_handler_timer,
+        .trigger_mode = 0,
+}};
 
 // 注册宏，定义一个驱动结构体，把驱动结构体实例放到驱动段
 REGISTER_DRIVER(timer_driver){
         .driver_name = "timer",
         .init = init_timer,
         .exit = exit_timer,
-        .irq = 50,              // 根据Allwinner_H3_Datasheet_v1.2.pdf，page 207，Timer 0的中断号是50
-        .trigger_mode = 0,
-        .irq_interrupt_handler = interrupt_handler_timer,
+        .irq_descriptors = timer_irq,
+        .irq_count = 1,
+        .device_type = 0,
+        .device_operator = NULL,
 };
 
 // 这部分内容来自Allwinner_H3_Datasheet_v1.2.pdf，page 156，Timer Register List

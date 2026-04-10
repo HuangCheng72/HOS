@@ -5,26 +5,34 @@
 #include "console.h"
 #include "../../lib/lib_kernel/lib_kernel.h"
 #include "../../kernel/kernel_task/kernel_sync.h"
-#include "../../kernel/kernel_device/kernel_device.h"
+#include "../../kernel/kernel_device/kernel_device_common.h"
+#include "../../kernel/kernel_buffer/kernel_buffer.h"
 
 // 终端锁是用递归锁（作用域限制在终端范围内，其他地方不得使用，所以加上static）
 static struct recursive_mutex console_lock;
+
+// 缓冲区是每个驱动自己需要就申请的
+static struct kernel_buffer *data_buffer = NULL;
 
 // 注册宏，定义一个驱动结构体，把驱动结构体实例放到驱动段
 REGISTER_DRIVER(console_driver){
         .driver_name = "console",
         .init = console_init,
         .exit = NULL,
-        .irq = -1,
-        .irq_interrupt_handler = NULL,
-        .need_data_buffer = 1,
-        .data_buffer = NULL
+        .irq_descriptors = NULL,
+        .irq_count = 0,
+        .device_type = 0,
+        .device_operator = NULL,
 };
 
 // 初始化唯一终端（控制台）
 void console_init() {
+    // 申请缓冲区
+
+    data_buffer = kernel_buffer_create();
+
     // 缓冲区检查
-    if(!console_driver.data_buffer) {
+    if(!data_buffer) {
         put_str("\n--------- CONSOLE_INIT_ERROR! ----------\n");
         for(;;);
     }
@@ -66,7 +74,7 @@ void console_put_int(int num) {
 void console_printf(const char* format, ...) {
     console_acquire();
 
-    struct kernel_buffer* buffer = (struct kernel_buffer*)console_driver.data_buffer;
+    struct kernel_buffer* buffer = (struct kernel_buffer*)data_buffer;
     char temp_buffer[256];
     const char *p;
     int int_temp;

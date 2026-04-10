@@ -7,13 +7,10 @@
 
 #include "../../lib/lib_kernel/lib_kernel.h"
 
-#define LED_GREEN 0
-#define LED_RED 1
-
-// 参数结构体
-struct led_io_request {
-    uint32_t led;       // LED类型：绿色LED或红色LED
-    uint32_t action;    // 动作：开（1）或关（0）
+// led驱动的read和write函数用到的参数，两个led灯的状态
+struct led_status {
+    uint32_t green_status;          // 绿色LED，关闭则为0，开启则为1
+    uint32_t red_status;            // 红色LED，关闭则为0，开启则为1
 };
 
 #endif //HOS_LED_H

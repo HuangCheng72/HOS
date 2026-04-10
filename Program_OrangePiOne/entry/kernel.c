@@ -68,8 +68,6 @@ void kernel_main(void) {
 
     // 开启IRQ中断
     intr_enable();
-    // 允许定时器中断
-    enable_gic_irq_interrupt(50);
 
     for(;;) {
         // 没什么事就让CPU休息
@@ -79,28 +77,28 @@ void kernel_main(void) {
 
 void led_blink_test(void *args) {
     // 获取LED驱动指针
-    struct driver *led_driver = get_driver("led");
+    struct driver_descriptor *led_driver = get_driver("led");
     if (led_driver == NULL) {
         // 处理未找到驱动的错误
         return;
     }
+    if(led_driver->device_type != 1 || led_driver->device_operator == NULL) {
+        // 不是字符设备，不提供操作函数
+        return;
+    }
 
-    struct led_io_request green_led_on = {LED_GREEN,1};     // 绿色LED 开
-    struct led_io_request green_led_off = {LED_GREEN, 0};   // 绿色LED 关
-    struct led_io_request red_led_on = {LED_RED,1};         // 红色LED 开
-    struct led_io_request red_led_off = {LED_RED,0};        // 红色LED 关
+    struct char_device_operator *led_ops = (struct char_device_operator *)(led_driver->device_operator);
+
+    struct led_status g_ON_r_OFF = { 1, 0}; // 绿开红关
+    struct led_status g_OFF_r_ON = { 0, 1}; // 红开绿关
 
     for(;;) {
 
-        // 打开绿色LED，关闭红色LED
-        device_write(led_driver, (char *)&green_led_on, sizeof(green_led_on));
-
-        device_write(led_driver, (char *)&red_led_off, sizeof(red_led_off));
+        led_ops->write((char*)(&g_ON_r_OFF), sizeof(g_ON_r_OFF));
         for(uint32_t i = 0; i < 8 * UINT16_MAX; i++); // 延时一段时间
 
-        // 关闭绿色LED，打开红色LED
-        device_write(led_driver, (char *)&green_led_off, sizeof(green_led_off));
-        device_write(led_driver, (char *)&red_led_on, sizeof(red_led_on));
+        led_ops->write((char*)(&g_OFF_r_ON), sizeof(g_OFF_r_ON));
         for(uint32_t i = 0; i < 8 * UINT16_MAX; i++); // 延时一段时间
     }
+
 }

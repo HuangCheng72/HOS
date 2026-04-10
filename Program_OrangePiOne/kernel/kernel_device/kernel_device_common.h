@@ -38,7 +38,6 @@ struct block_device_operator {
 };
 
 // GPIO设备操作集
-// 适合对GPIO引脚进行方向配置、电平读写、中断配置等操作
 struct gpio_device_operator {
     int32_t (*write_pin)(uint32_t group, uint32_t pin, uint32_t value);            // 设置引脚输出电平，成功返回0，失败返回-1
     int32_t (*read_pin)(uint32_t group, uint32_t pin);                             // 读取引脚输入电平，成功返回0或1，失败返回-1

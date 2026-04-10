@@ -6,6 +6,55 @@
 #include "gpio_datasheet.h"
 #include "../../kernel/kernel_device/kernel_device.h"
 
+// GPIO 组信息描述符
+// 这个结构体用于描述某一组 GPIO 的 pin 范围
+struct gpio_group_info {
+    gpio_group_t group;           // GPIO 组枚举值
+    uint32_t pin_start;           // 这一组 GPIO 的起始 pin 编号
+    uint32_t pin_end;             // 这一组 GPIO 的结束 pin 编号
+};
+
+
+// GPIO 组对应的 pin 范围信息表
+// 这里按 H3 数据手册中实际存在的 pin 数量填写
+static const struct gpio_group_info gpio_group_info_table[GPIO_GROUP_COUNT] = {
+        { GPIO_GROUP_A, 0, 21 },    // PA0  ~ PA21
+        { GPIO_GROUP_C, 0, 18 },    // PC0  ~ PC18
+        { GPIO_GROUP_D, 0, 17 },    // PD0  ~ PD17
+        { GPIO_GROUP_E, 0, 15 },    // PE0  ~ PE15
+        { GPIO_GROUP_F, 0, 6  },    // PF0  ~ PF6
+        { GPIO_GROUP_G, 0, 13 },    // PG0  ~ PG13
+        { GPIO_GROUP_L, 0, 11 }     // PL0  ~ PL11
+};
+
+
+// 判断 GPIO 组是否有效
+static inline uint8_t gpio_group_valid(gpio_group_t group) {
+    return (group < GPIO_GROUP_COUNT) ? 1 : 0;
+}
+
+
+// 判断某个 GPIO 的 group 和 pin 是否有效
+static inline uint8_t gpio_pin_valid(gpio_group_t group, uint32_t pin) {
+    if (gpio_group_valid(group) == 0) {
+        return 0;
+    }
+
+    return (pin >= gpio_group_info_table[group].pin_start &&
+            pin <= gpio_group_info_table[group].pin_end) ? 1 : 0;
+}
+
+
+// 获取某个 GPIO 组允许的最大 pin 编号
+static inline int32_t gpio_group_max_pin(gpio_group_t group) {
+    if (gpio_group_valid(group) == 0) {
+        return -1;
+    }
+
+    return (int32_t)gpio_group_info_table[group].pin_end;
+}
+
+
 // 虽然 gpio_datasheet.h 提供了数据手册里面的完整结构化信息
 // 但是这种组织形式还是不直观
 // 在这里进行符合阅读习惯的重新整合
@@ -215,324 +264,878 @@ void gpio_exit(void) {
     // 不做“清空所有GPIO配置”的破坏性操作，保留原样等待关机
 }
 
-// GPIO读入（注意，需要设置上拉电阻和下拉电阻，防止抖动）
-int32_t gpio_read(char *args, uint32_t args_size) {
-    if (args == NULL || args_size != sizeof(struct gpio_request)) {
-        return -1;
-    }
+// 写针脚输出电平，成功返回0，失败返回-1
+int32_t write_pin(uint32_t group, uint32_t pin, uint32_t value);
 
-    struct gpio_request *request = (struct gpio_request *)args;
+int32_t read_pin(uint32_t group, uint32_t pin);                             // 读取引脚输入电平，成功返回0或1，失败返回-1
 
-    // 因为结构都一样，可以直接调整为统一的一个结构体指针来编码
-    // 这里选择A组的结构体
+int32_t configure(void *config);                                            // 进行其他配置，参数解释由具体驱动自行决定
 
-    struct gpio_group_A * gpio_ptr = NULL; // 操作的GPIO的指针
+static struct gpio_device_operator gpio_operator = {
+        .write_pin = write_pin,
+        .read_pin = read_pin,
+        .configure = configure,
+};
 
-    if (request->group == 'A') {
-        if (request->pin > 21) {
-            // A组只有0到21号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_A_BASE;
-    }
-    if (request->group == 'C') {
-        if (request->pin > 16) {
-            // C组只有0到16号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_C_BASE;
-    }
-    if (request->group == 'D') {
-        if (request->pin > 17) {
-            // D组只有0到17号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_D_BASE;
-    }
-    if (request->group == 'E') {
-        if (request->pin > 15) {
-            // E组只有0到15号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_E_BASE;
-    }
-    if (request->group == 'F') {
-        if (request->pin > 6) {
-            // F组只有0到6号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_F_BASE;
-    }
-    if (request->group == 'G') {
-        if (request->pin > 13) {
-            // G组只有0到13号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_G_BASE;
-    }
-    if (request->group == 'L') {
-        if (request->pin > 11) {
-            // L组只有0到11号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_L_BASE;
-    }
-
-    if(gpio_ptr == NULL) {
-        return -1;  // 输入的GPIO组号非法
-    }
-
-    // 检查当前引脚是否为输入模式，否则更改为输入模式
-
-    // 为了方便，懒得判断了，直接统一修正为输入模式
-
-    // 我之所以要这么做也是因为我特别厌恶位运算，没办法，我是真的对位运算很不喜欢，我宁愿这样复制粘贴都不想写位运算
-
-
-    if (request->pin == 0) {
-        gpio_ptr->cfg0.PA0_SELECT = 0;
-    }
-    if (request->pin == 1) {
-        gpio_ptr->cfg0.PA1_SELECT = 0;
-    }
-    if (request->pin == 2) {
-        gpio_ptr->cfg0.PA2_SELECT = 0;
-    }
-    if (request->pin == 3) {
-        gpio_ptr->cfg0.PA3_SELECT = 0;
-    }
-    if (request->pin == 4) {
-        gpio_ptr->cfg0.PA4_SELECT = 0;
-    }
-    if (request->pin == 5) {
-        gpio_ptr->cfg0.PA5_SELECT = 0;
-    }
-    if (request->pin == 6) {
-        gpio_ptr->cfg0.PA6_SELECT = 0;
-    }
-    if (request->pin == 7) {
-        gpio_ptr->cfg0.PA7_SELECT = 0;
-    }
-    if (request->pin == 8) {
-        gpio_ptr->cfg1.PA8_SELECT = 0;
-    }
-    if (request->pin == 9) {
-        gpio_ptr->cfg1.PA9_SELECT = 0;
-    }
-    if (request->pin == 10) {
-        gpio_ptr->cfg1.PA10_SELECT = 0;
-    }
-    if (request->pin == 11) {
-        gpio_ptr->cfg1.PA11_SELECT = 0;
-    }
-    if (request->pin == 12) {
-        gpio_ptr->cfg1.PA12_SELECT = 0;
-    }
-    if (request->pin == 13) {
-        gpio_ptr->cfg1.PA13_SELECT = 0;
-    }
-    if (request->pin == 14) {
-        gpio_ptr->cfg1.PA14_SELECT = 0;
-    }
-    if (request->pin == 15) {
-        gpio_ptr->cfg1.PA15_SELECT = 0;
-    }
-    if (request->pin == 16) {
-        gpio_ptr->cfg2.PA16_SELECT = 0;
-    }
-    if (request->pin == 17) {
-        gpio_ptr->cfg2.PA17_SELECT = 0;
-    }
-    if (request->pin == 18) {
-        gpio_ptr->cfg2.PA18_SELECT = 0;
-    }
-    if (request->pin == 19) {
-        gpio_ptr->cfg2.PA19_SELECT = 0;
-    }
-    if (request->pin == 20) {
-        gpio_ptr->cfg2.PA20_SELECT = 0;
-    }
-    if (request->pin == 21) {
-        gpio_ptr->cfg2.PA21_SELECT = 0;
-    }
-
-    // 之前已经排除pin大于21的情况，所以至此肯定是可以判断和修正出来的
-
-    // 读取gpio_ptr->dat的第几位的值，存入request->value就行
-    // 把gpio_ptr->的值右移，舍弃掉低位，这样取的位就在最低位
-    // 位与0x1，把高位信息舍去，这样剩下的就只是这个针脚的信息了
-
-    request->value = (*(uint32_t*)(&(gpio_ptr->dat)) >> (request->pin)) & 0x1;
-
-    return 0;
-}
-
-// GPIO写出
-int32_t gpio_write(char *args, uint32_t args_size) {
-    if (args == NULL || args_size != sizeof(struct gpio_request)) {
-        return -1;
-    }
-
-    struct gpio_request *request = (struct gpio_request *)args;
-
-    // 因为结构都一样，可以直接调整为统一的一个结构体指针来编码
-    // 这里选择A组的结构体
-
-    struct gpio_group_A * gpio_ptr = NULL; // 操作的GPIO的指针
-
-    if (request->group == 'A') {
-        if (request->pin > 21) {
-            // A组只有0到21号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_A_BASE;
-    }
-    if (request->group == 'C') {
-        if (request->pin > 16) {
-            // C组只有0到16号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_C_BASE;
-    }
-    if (request->group == 'D') {
-        if (request->pin > 17) {
-            // D组只有0到17号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_D_BASE;
-    }
-    if (request->group == 'E') {
-        if (request->pin > 15) {
-            // E组只有0到15号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_E_BASE;
-    }
-    if (request->group == 'F') {
-        if (request->pin > 6) {
-            // F组只有0到6号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_F_BASE;
-    }
-    if (request->group == 'G') {
-        if (request->pin > 13) {
-            // G组只有0到13号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_G_BASE;
-    }
-    if (request->group == 'L') {
-        if (request->pin > 11) {
-            // L组只有0到11号针脚
-            return -1;
-        }
-        gpio_ptr = (struct gpio_group_A *)GPIO_L_BASE;
-    }
-
-    if(gpio_ptr == NULL) {
-        return -1;  // 输入的GPIO组号非法
-    }
-
-    // 检查当前引脚是否为输出模式，否则更改为输出模式
-
-    // 为了方便，懒得判断了，直接统一修正为输出模式
-
-    // 我之所以要这么做也是因为我特别厌恶位运算，没办法，我是真的对位运算很不喜欢，我宁愿这样复制粘贴都不想写位运算
-
-
-    if (request->pin == 0) {
-        gpio_ptr->cfg0.PA0_SELECT = 1;
-    }
-    if (request->pin == 1) {
-        gpio_ptr->cfg0.PA1_SELECT = 1;
-    }
-    if (request->pin == 2) {
-        gpio_ptr->cfg0.PA2_SELECT = 1;
-    }
-    if (request->pin == 3) {
-        gpio_ptr->cfg0.PA3_SELECT = 1;
-    }
-    if (request->pin == 4) {
-        gpio_ptr->cfg0.PA4_SELECT = 1;
-    }
-    if (request->pin == 5) {
-        gpio_ptr->cfg0.PA5_SELECT = 1;
-    }
-    if (request->pin == 6) {
-        gpio_ptr->cfg0.PA6_SELECT = 1;
-    }
-    if (request->pin == 7) {
-        gpio_ptr->cfg0.PA7_SELECT = 1;
-    }
-    if (request->pin == 8) {
-        gpio_ptr->cfg1.PA8_SELECT = 1;
-    }
-    if (request->pin == 9) {
-        gpio_ptr->cfg1.PA9_SELECT = 1;
-    }
-    if (request->pin == 10) {
-        gpio_ptr->cfg1.PA10_SELECT = 1;
-    }
-    if (request->pin == 11) {
-        gpio_ptr->cfg1.PA11_SELECT = 1;
-    }
-    if (request->pin == 12) {
-        gpio_ptr->cfg1.PA12_SELECT = 1;
-    }
-    if (request->pin == 13) {
-        gpio_ptr->cfg1.PA13_SELECT = 1;
-    }
-    if (request->pin == 14) {
-        gpio_ptr->cfg1.PA14_SELECT = 1;
-    }
-    if (request->pin == 15) {
-        gpio_ptr->cfg1.PA15_SELECT = 1;
-    }
-    if (request->pin == 16) {
-        gpio_ptr->cfg2.PA16_SELECT = 1;
-    }
-    if (request->pin == 17) {
-        gpio_ptr->cfg2.PA17_SELECT = 1;
-    }
-    if (request->pin == 18) {
-        gpio_ptr->cfg2.PA18_SELECT = 1;
-    }
-    if (request->pin == 19) {
-        gpio_ptr->cfg2.PA19_SELECT = 1;
-    }
-    if (request->pin == 20) {
-        gpio_ptr->cfg2.PA20_SELECT = 1;
-    }
-    if (request->pin == 21) {
-        gpio_ptr->cfg2.PA21_SELECT = 1;
-    }
-
-    // 之前已经排除pin大于21的情况，所以至此肯定是可以判断和修正出来的
-
-    // 设置引脚电平值
-    // 如果是设置为高电平，直接把1左移到指定位数，然后位或上去就行，这样其他的信息都能被保护
-    // 如果是设置为低电平，直接把1左移到指定位数，按位取反，然后位与上去就行，这样其他的信息都能被保护
-
-
-    if (request->value) {
-        *(uint32_t*)(&(gpio_ptr->dat)) |= (1 << request->pin);
-    } else {
-        *(uint32_t*)(&(gpio_ptr->dat)) &= ~(1 << request->pin);
-    }
-
-    return 0;
-}
-
-// 注册驱动结构体
-REGISTER_DRIVER(gpio_driver) {
+// 注册宏，定义一个驱动结构体，把驱动结构体实例放到驱动段
+REGISTER_DRIVER(gpio_driver){
         .driver_name = "gpio",
         .init = gpio_init,
         .exit = gpio_exit,
-        .read = gpio_read,
-        .write = gpio_write,
-        .irq = -1, // 没有中断处理
-        .irq_interrupt_handler = NULL,
-        .need_command_buffer = 0,
-        .need_data_buffer = 0,
+        .irq_descriptors = NULL,
+        .irq_count = 0,
+        .device_type = 3,
+        .device_operator = &gpio_operator,
 };
+
+// 获取 GPIO 组的寄存器基地址
+static void *gpio_get_group_ptr(gpio_group_t group) {
+    if (group == GPIO_GROUP_A) return (void *)GPIO_A_BASE;
+    if (group == GPIO_GROUP_C) return (void *)GPIO_C_BASE;
+    if (group == GPIO_GROUP_D) return (void *)GPIO_D_BASE;
+    if (group == GPIO_GROUP_E) return (void *)GPIO_E_BASE;
+    if (group == GPIO_GROUP_F) return (void *)GPIO_F_BASE;
+    if (group == GPIO_GROUP_G) return (void *)GPIO_G_BASE;
+    if (group == GPIO_GROUP_L) return (void *)GPIO_L_BASE;
+    return NULL;
+}
+
+// 设置单个pin的功能
+static int32_t gpio_set_function(gpio_group_t group, uint32_t pin, uint32_t function) {
+    if (gpio_pin_valid(group, pin) == 0) {
+        return -1;
+    }
+
+    if (function > 7) {
+        return -1;
+    }
+
+    if (group == GPIO_GROUP_A) {
+        struct gpio_group_A *gpio = (struct gpio_group_A *)GPIO_A_BASE;
+        switch (pin) {
+            case 0:  gpio->cfg0.PA0_SELECT = function; break;
+            case 1:  gpio->cfg0.PA1_SELECT = function; break;
+            case 2:  gpio->cfg0.PA2_SELECT = function; break;
+            case 3:  gpio->cfg0.PA3_SELECT = function; break;
+            case 4:  gpio->cfg0.PA4_SELECT = function; break;
+            case 5:  gpio->cfg0.PA5_SELECT = function; break;
+            case 6:  gpio->cfg0.PA6_SELECT = function; break;
+            case 7:  gpio->cfg0.PA7_SELECT = function; break;
+            case 8:  gpio->cfg1.PA8_SELECT = function; break;
+            case 9:  gpio->cfg1.PA9_SELECT = function; break;
+            case 10: gpio->cfg1.PA10_SELECT = function; break;
+            case 11: gpio->cfg1.PA11_SELECT = function; break;
+            case 12: gpio->cfg1.PA12_SELECT = function; break;
+            case 13: gpio->cfg1.PA13_SELECT = function; break;
+            case 14: gpio->cfg1.PA14_SELECT = function; break;
+            case 15: gpio->cfg1.PA15_SELECT = function; break;
+            case 16: gpio->cfg2.PA16_SELECT = function; break;
+            case 17: gpio->cfg2.PA17_SELECT = function; break;
+            case 18: gpio->cfg2.PA18_SELECT = function; break;
+            case 19: gpio->cfg2.PA19_SELECT = function; break;
+            case 20: gpio->cfg2.PA20_SELECT = function; break;
+            case 21: gpio->cfg2.PA21_SELECT = function; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_C) {
+        struct gpio_group_C *gpio = (struct gpio_group_C *)GPIO_C_BASE;
+        switch (pin) {
+            case 0:  gpio->cfg0.PC0_SELECT = function; break;
+            case 1:  gpio->cfg0.PC1_SELECT = function; break;
+            case 2:  gpio->cfg0.PC2_SELECT = function; break;
+            case 3:  gpio->cfg0.PC3_SELECT = function; break;
+            case 4:  gpio->cfg0.PC4_SELECT = function; break;
+            case 5:  gpio->cfg0.PC5_SELECT = function; break;
+            case 6:  gpio->cfg0.PC6_SELECT = function; break;
+            case 7:  gpio->cfg0.PC7_SELECT = function; break;
+            case 8:  gpio->cfg1.PC8_SELECT = function; break;
+            case 9:  gpio->cfg1.PC9_SELECT = function; break;
+            case 10: gpio->cfg1.PC10_SELECT = function; break;
+            case 11: gpio->cfg1.PC11_SELECT = function; break;
+            case 12: gpio->cfg1.PC12_SELECT = function; break;
+            case 13: gpio->cfg1.PC13_SELECT = function; break;
+            case 14: gpio->cfg1.PC14_SELECT = function; break;
+            case 15: gpio->cfg1.PC15_SELECT = function; break;
+            case 16: gpio->cfg2.PC16_SELECT = function; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_D) {
+        struct gpio_group_D *gpio = (struct gpio_group_D *)GPIO_D_BASE;
+        switch (pin) {
+            case 0:  gpio->cfg0.PD0_SELECT = function; break;
+            case 1:  gpio->cfg0.PD1_SELECT = function; break;
+            case 2:  gpio->cfg0.PD2_SELECT = function; break;
+            case 3:  gpio->cfg0.PD3_SELECT = function; break;
+            case 4:  gpio->cfg0.PD4_SELECT = function; break;
+            case 5:  gpio->cfg0.PD5_SELECT = function; break;
+            case 6:  gpio->cfg0.PD6_SELECT = function; break;
+            case 7:  gpio->cfg0.PD7_SELECT = function; break;
+            case 8:  gpio->cfg1.PD8_SELECT = function; break;
+            case 9:  gpio->cfg1.PD9_SELECT = function; break;
+            case 10: gpio->cfg1.PD10_SELECT = function; break;
+            case 11: gpio->cfg1.PD11_SELECT = function; break;
+            case 12: gpio->cfg1.PD12_SELECT = function; break;
+            case 13: gpio->cfg1.PD13_SELECT = function; break;
+            case 14: gpio->cfg1.PD14_SELECT = function; break;
+            case 15: gpio->cfg1.PD15_SELECT = function; break;
+            case 16: gpio->cfg2.PD16_SELECT = function; break;
+            case 17: gpio->cfg2.PD17_SELECT = function; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_E) {
+        struct gpio_group_E *gpio = (struct gpio_group_E *)GPIO_E_BASE;
+        switch (pin) {
+            case 0:  gpio->cfg0.PE0_SELECT = function; break;
+            case 1:  gpio->cfg0.PE1_SELECT = function; break;
+            case 2:  gpio->cfg0.PE2_SELECT = function; break;
+            case 3:  gpio->cfg0.PE3_SELECT = function; break;
+            case 4:  gpio->cfg0.PE4_SELECT = function; break;
+            case 5:  gpio->cfg0.PE5_SELECT = function; break;
+            case 6:  gpio->cfg0.PE6_SELECT = function; break;
+            case 7:  gpio->cfg0.PE7_SELECT = function; break;
+            case 8:  gpio->cfg1.PE8_SELECT = function; break;
+            case 9:  gpio->cfg1.PE9_SELECT = function; break;
+            case 10: gpio->cfg1.PE10_SELECT = function; break;
+            case 11: gpio->cfg1.PE11_SELECT = function; break;
+            case 12: gpio->cfg1.PE12_SELECT = function; break;
+            case 13: gpio->cfg1.PE13_SELECT = function; break;
+            case 14: gpio->cfg1.PE14_SELECT = function; break;
+            case 15: gpio->cfg1.PE15_SELECT = function; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_F) {
+        struct gpio_group_F *gpio = (struct gpio_group_F *)GPIO_F_BASE;
+        switch (pin) {
+            case 0: gpio->cfg0.PF0_SELECT = function; break;
+            case 1: gpio->cfg0.PF1_SELECT = function; break;
+            case 2: gpio->cfg0.PF2_SELECT = function; break;
+            case 3: gpio->cfg0.PF3_SELECT = function; break;
+            case 4: gpio->cfg0.PF4_SELECT = function; break;
+            case 5: gpio->cfg0.PF5_SELECT = function; break;
+            case 6: gpio->cfg0.PF6_SELECT = function; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_G) {
+        struct gpio_group_G *gpio = (struct gpio_group_G *)GPIO_G_BASE;
+        switch (pin) {
+            case 0:  gpio->cfg0.PG0_SELECT = function; break;
+            case 1:  gpio->cfg0.PG1_SELECT = function; break;
+            case 2:  gpio->cfg0.PG2_SELECT = function; break;
+            case 3:  gpio->cfg0.PG3_SELECT = function; break;
+            case 4:  gpio->cfg0.PG4_SELECT = function; break;
+            case 5:  gpio->cfg0.PG5_SELECT = function; break;
+            case 6:  gpio->cfg0.PG6_SELECT = function; break;
+            case 7:  gpio->cfg0.PG7_SELECT = function; break;
+            case 8:  gpio->cfg1.PG8_SELECT = function; break;
+            case 9:  gpio->cfg1.PG9_SELECT = function; break;
+            case 10: gpio->cfg1.PG10_SELECT = function; break;
+            case 11: gpio->cfg1.PG11_SELECT = function; break;
+            case 12: gpio->cfg1.PG12_SELECT = function; break;
+            case 13: gpio->cfg1.PG13_SELECT = function; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_L) {
+        struct gpio_group_L *gpio = (struct gpio_group_L *)GPIO_L_BASE;
+        switch (pin) {
+            case 0:  gpio->cfg0.PL0_SELECT = function; break;
+            case 1:  gpio->cfg0.PL1_SELECT = function; break;
+            case 2:  gpio->cfg0.PL2_SELECT = function; break;
+            case 3:  gpio->cfg0.PL3_SELECT = function; break;
+            case 4:  gpio->cfg0.PL4_SELECT = function; break;
+            case 5:  gpio->cfg0.PL5_SELECT = function; break;
+            case 6:  gpio->cfg0.PL6_SELECT = function; break;
+            case 7:  gpio->cfg0.PL7_SELECT = function; break;
+            case 8:  gpio->cfg1.PL8_SELECT = function; break;
+            case 9:  gpio->cfg1.PL9_SELECT = function; break;
+            case 10: gpio->cfg1.PL10_SELECT = function; break;
+            case 11: gpio->cfg1.PL11_SELECT = function; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    return -1;
+}
+
+// 设置单个pin的上下拉电阻
+static int32_t gpio_set_pull(gpio_group_t group, uint32_t pin, uint32_t pull) {
+    if (gpio_pin_valid(group, pin) == 0) {
+        return -1;
+    }
+
+    if (pull > 2) {
+        return -1;
+    }
+
+    if (group == GPIO_GROUP_A) {
+        struct gpio_group_A *gpio = (struct gpio_group_A *)GPIO_A_BASE;
+        switch (pin) {
+            case 0:  gpio->pull0.PA0_PULL = pull; break;
+            case 1:  gpio->pull0.PA1_PULL = pull; break;
+            case 2:  gpio->pull0.PA2_PULL = pull; break;
+            case 3:  gpio->pull0.PA3_PULL = pull; break;
+            case 4:  gpio->pull0.PA4_PULL = pull; break;
+            case 5:  gpio->pull0.PA5_PULL = pull; break;
+            case 6:  gpio->pull0.PA6_PULL = pull; break;
+            case 7:  gpio->pull0.PA7_PULL = pull; break;
+            case 8:  gpio->pull0.PA8_PULL = pull; break;
+            case 9:  gpio->pull0.PA9_PULL = pull; break;
+            case 10: gpio->pull0.PA10_PULL = pull; break;
+            case 11: gpio->pull0.PA11_PULL = pull; break;
+            case 12: gpio->pull0.PA12_PULL = pull; break;
+            case 13: gpio->pull0.PA13_PULL = pull; break;
+            case 14: gpio->pull0.PA14_PULL = pull; break;
+            case 15: gpio->pull0.PA15_PULL = pull; break;
+            case 16: gpio->pull1.PA16_PULL = pull; break;
+            case 17: gpio->pull1.PA17_PULL = pull; break;
+            case 18: gpio->pull1.PA18_PULL = pull; break;
+            case 19: gpio->pull1.PA19_PULL = pull; break;
+            case 20: gpio->pull1.PA20_PULL = pull; break;
+            case 21: gpio->pull1.PA21_PULL = pull; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_C) {
+        struct gpio_group_C *gpio = (struct gpio_group_C *)GPIO_C_BASE;
+        switch (pin) {
+            case 0:  gpio->pull0.PC0_PULL = pull; break;
+            case 1:  gpio->pull0.PC1_PULL = pull; break;
+            case 2:  gpio->pull0.PC2_PULL = pull; break;
+            case 3:  gpio->pull0.PC3_PULL = pull; break;
+            case 4:  gpio->pull0.PC4_PULL = pull; break;
+            case 5:  gpio->pull0.PC5_PULL = pull; break;
+            case 6:  gpio->pull0.PC6_PULL = pull; break;
+            case 7:  gpio->pull0.PC7_PULL = pull; break;
+            case 8:  gpio->pull0.PC8_PULL = pull; break;
+            case 9:  gpio->pull0.PC9_PULL = pull; break;
+            case 10: gpio->pull0.PC10_PULL = pull; break;
+            case 11: gpio->pull0.PC11_PULL = pull; break;
+            case 12: gpio->pull0.PC12_PULL = pull; break;
+            case 13: gpio->pull0.PC13_PULL = pull; break;
+            case 14: gpio->pull0.PC14_PULL = pull; break;
+            case 15: gpio->pull0.PC15_PULL = pull; break;
+            case 16: gpio->pull1.PC16_PULL = pull; break;
+            case 17: gpio->pull1.PC17_PULL = pull; break;
+            case 18: gpio->pull1.PC18_PULL = pull; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_D) {
+        struct gpio_group_D *gpio = (struct gpio_group_D *)GPIO_D_BASE;
+        switch (pin) {
+            case 0:  gpio->pull0.PD0_PULL = pull; break;
+            case 1:  gpio->pull0.PD1_PULL = pull; break;
+            case 2:  gpio->pull0.PD2_PULL = pull; break;
+            case 3:  gpio->pull0.PD3_PULL = pull; break;
+            case 4:  gpio->pull0.PD4_PULL = pull; break;
+            case 5:  gpio->pull0.PD5_PULL = pull; break;
+            case 6:  gpio->pull0.PD6_PULL = pull; break;
+            case 7:  gpio->pull0.PD7_PULL = pull; break;
+            case 8:  gpio->pull0.PD8_PULL = pull; break;
+            case 9:  gpio->pull0.PD9_PULL = pull; break;
+            case 10: gpio->pull0.PD10_PULL = pull; break;
+            case 11: gpio->pull0.PD11_PULL = pull; break;
+            case 12: gpio->pull0.PD12_PULL = pull; break;
+            case 13: gpio->pull0.PD13_PULL = pull; break;
+            case 14: gpio->pull0.PD14_PULL = pull; break;
+            case 15: gpio->pull0.PD15_PULL = pull; break;
+            case 16: gpio->pull1.PD16_PULL = pull; break;
+            case 17: gpio->pull1.PD17_PULL = pull; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_E) {
+        struct gpio_group_E *gpio = (struct gpio_group_E *)GPIO_E_BASE;
+        switch (pin) {
+            case 0:  gpio->pull0.PE0_PULL = pull; break;
+            case 1:  gpio->pull0.PE1_PULL = pull; break;
+            case 2:  gpio->pull0.PE2_PULL = pull; break;
+            case 3:  gpio->pull0.PE3_PULL = pull; break;
+            case 4:  gpio->pull0.PE4_PULL = pull; break;
+            case 5:  gpio->pull0.PE5_PULL = pull; break;
+            case 6:  gpio->pull0.PE6_PULL = pull; break;
+            case 7:  gpio->pull0.PE7_PULL = pull; break;
+            case 8:  gpio->pull0.PE8_PULL = pull; break;
+            case 9:  gpio->pull0.PE9_PULL = pull; break;
+            case 10: gpio->pull0.PE10_PULL = pull; break;
+            case 11: gpio->pull0.PE11_PULL = pull; break;
+            case 12: gpio->pull0.PE12_PULL = pull; break;
+            case 13: gpio->pull0.PE13_PULL = pull; break;
+            case 14: gpio->pull0.PE14_PULL = pull; break;
+            case 15: gpio->pull0.PE15_PULL = pull; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_F) {
+        struct gpio_group_F *gpio = (struct gpio_group_F *)GPIO_F_BASE;
+        switch (pin) {
+            case 0: gpio->pull0.PF0_PULL = pull; break;
+            case 1: gpio->pull0.PF1_PULL = pull; break;
+            case 2: gpio->pull0.PF2_PULL = pull; break;
+            case 3: gpio->pull0.PF3_PULL = pull; break;
+            case 4: gpio->pull0.PF4_PULL = pull; break;
+            case 5: gpio->pull0.PF5_PULL = pull; break;
+            case 6: gpio->pull0.PF6_PULL = pull; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_G) {
+        struct gpio_group_G *gpio = (struct gpio_group_G *)GPIO_G_BASE;
+        switch (pin) {
+            case 0:  gpio->pull0.PG0_PULL = pull; break;
+            case 1:  gpio->pull0.PG1_PULL = pull; break;
+            case 2:  gpio->pull0.PG2_PULL = pull; break;
+            case 3:  gpio->pull0.PG3_PULL = pull; break;
+            case 4:  gpio->pull0.PG4_PULL = pull; break;
+            case 5:  gpio->pull0.PG5_PULL = pull; break;
+            case 6:  gpio->pull0.PG6_PULL = pull; break;
+            case 7:  gpio->pull0.PG7_PULL = pull; break;
+            case 8:  gpio->pull0.PG8_PULL = pull; break;
+            case 9:  gpio->pull0.PG9_PULL = pull; break;
+            case 10: gpio->pull0.PG10_PULL = pull; break;
+            case 11: gpio->pull0.PG11_PULL = pull; break;
+            case 12: gpio->pull0.PG12_PULL = pull; break;
+            case 13: gpio->pull0.PG13_PULL = pull; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_L) {
+        struct gpio_group_L *gpio = (struct gpio_group_L *)GPIO_L_BASE;
+        switch (pin) {
+            case 0:  gpio->pull0.PL0_PULL = pull; break;
+            case 1:  gpio->pull0.PL1_PULL = pull; break;
+            case 2:  gpio->pull0.PL2_PULL = pull; break;
+            case 3:  gpio->pull0.PL3_PULL = pull; break;
+            case 4:  gpio->pull0.PL4_PULL = pull; break;
+            case 5:  gpio->pull0.PL5_PULL = pull; break;
+            case 6:  gpio->pull0.PL6_PULL = pull; break;
+            case 7:  gpio->pull0.PL7_PULL = pull; break;
+            case 8:  gpio->pull0.PL8_PULL = pull; break;
+            case 9:  gpio->pull0.PL9_PULL = pull; break;
+            case 10: gpio->pull0.PL10_PULL = pull; break;
+            case 11: gpio->pull0.PL11_PULL = pull; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    return -1;
+}
+
+// 设置单个pin的驱动等级
+static int32_t gpio_set_drive_level(gpio_group_t group, uint32_t pin, uint32_t drive_level) {
+    if (gpio_pin_valid(group, pin) == 0) {
+        return -1;
+    }
+
+    if (drive_level > 3) {
+        return -1;
+    }
+
+    if (group == GPIO_GROUP_A) {
+        struct gpio_group_A *gpio = (struct gpio_group_A *)GPIO_A_BASE;
+        switch (pin) {
+            case 0:  gpio->drv0.PA0_DRV = drive_level; break;
+            case 1:  gpio->drv0.PA1_DRV = drive_level; break;
+            case 2:  gpio->drv0.PA2_DRV = drive_level; break;
+            case 3:  gpio->drv0.PA3_DRV = drive_level; break;
+            case 4:  gpio->drv0.PA4_DRV = drive_level; break;
+            case 5:  gpio->drv0.PA5_DRV = drive_level; break;
+            case 6:  gpio->drv0.PA6_DRV = drive_level; break;
+            case 7:  gpio->drv0.PA7_DRV = drive_level; break;
+            case 8:  gpio->drv0.PA8_DRV = drive_level; break;
+            case 9:  gpio->drv0.PA9_DRV = drive_level; break;
+            case 10: gpio->drv0.PA10_DRV = drive_level; break;
+            case 11: gpio->drv0.PA11_DRV = drive_level; break;
+            case 12: gpio->drv0.PA12_DRV = drive_level; break;
+            case 13: gpio->drv0.PA13_DRV = drive_level; break;
+            case 14: gpio->drv0.PA14_DRV = drive_level; break;
+            case 15: gpio->drv0.PA15_DRV = drive_level; break;
+            case 16: gpio->drv1.PA16_DRV = drive_level; break;
+            case 17: gpio->drv1.PA17_DRV = drive_level; break;
+            case 18: gpio->drv1.PA18_DRV = drive_level; break;
+            case 19: gpio->drv1.PA19_DRV = drive_level; break;
+            case 20: gpio->drv1.PA20_DRV = drive_level; break;
+            case 21: gpio->drv1.PA21_DRV = drive_level; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_C) {
+        struct gpio_group_C *gpio = (struct gpio_group_C *)GPIO_C_BASE;
+        switch (pin) {
+            case 0:  gpio->drv0.PC0_DRV = drive_level; break;
+            case 1:  gpio->drv0.PC1_DRV = drive_level; break;
+            case 2:  gpio->drv0.PC2_DRV = drive_level; break;
+            case 3:  gpio->drv0.PC3_DRV = drive_level; break;
+            case 4:  gpio->drv0.PC4_DRV = drive_level; break;
+            case 5:  gpio->drv0.PC5_DRV = drive_level; break;
+            case 6:  gpio->drv0.PC6_DRV = drive_level; break;
+            case 7:  gpio->drv0.PC7_DRV = drive_level; break;
+            case 8:  gpio->drv0.PC8_DRV = drive_level; break;
+            case 9:  gpio->drv0.PC9_DRV = drive_level; break;
+            case 10: gpio->drv0.PC10_DRV = drive_level; break;
+            case 11: gpio->drv0.PC11_DRV = drive_level; break;
+            case 12: gpio->drv0.PC12_DRV = drive_level; break;
+            case 13: gpio->drv0.PC13_DRV = drive_level; break;
+            case 14: gpio->drv0.PC14_DRV = drive_level; break;
+            case 15: gpio->drv0.PC15_DRV = drive_level; break;
+            case 16: gpio->drv1.PC16_DRV = drive_level; break;
+            case 17: gpio->drv1.PC17_DRV = drive_level; break;
+            case 18: gpio->drv1.PC18_DRV = drive_level; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_D) {
+        struct gpio_group_D *gpio = (struct gpio_group_D *)GPIO_D_BASE;
+        switch (pin) {
+            case 0:  gpio->drv0.PD0_DRV = drive_level; break;
+            case 1:  gpio->drv0.PD1_DRV = drive_level; break;
+            case 2:  gpio->drv0.PD2_DRV = drive_level; break;
+            case 3:  gpio->drv0.PD3_DRV = drive_level; break;
+            case 4:  gpio->drv0.PD4_DRV = drive_level; break;
+            case 5:  gpio->drv0.PD5_DRV = drive_level; break;
+            case 6:  gpio->drv0.PD6_DRV = drive_level; break;
+            case 7:  gpio->drv0.PD7_DRV = drive_level; break;
+            case 8:  gpio->drv0.PD8_DRV = drive_level; break;
+            case 9:  gpio->drv0.PD9_DRV = drive_level; break;
+            case 10: gpio->drv0.PD10_DRV = drive_level; break;
+            case 11: gpio->drv0.PD11_DRV = drive_level; break;
+            case 12: gpio->drv0.PD12_DRV = drive_level; break;
+            case 13: gpio->drv0.PD13_DRV = drive_level; break;
+            case 14: gpio->drv0.PD14_DRV = drive_level; break;
+            case 15: gpio->drv0.PD15_DRV = drive_level; break;
+            case 16: gpio->drv1.PD16_DRV = drive_level; break;
+            case 17: gpio->drv1.PD17_DRV = drive_level; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_E) {
+        struct gpio_group_E *gpio = (struct gpio_group_E *)GPIO_E_BASE;
+        switch (pin) {
+            case 0:  gpio->drv0.PE0_DRV = drive_level; break;
+            case 1:  gpio->drv0.PE1_DRV = drive_level; break;
+            case 2:  gpio->drv0.PE2_DRV = drive_level; break;
+            case 3:  gpio->drv0.PE3_DRV = drive_level; break;
+            case 4:  gpio->drv0.PE4_DRV = drive_level; break;
+            case 5:  gpio->drv0.PE5_DRV = drive_level; break;
+            case 6:  gpio->drv0.PE6_DRV = drive_level; break;
+            case 7:  gpio->drv0.PE7_DRV = drive_level; break;
+            case 8:  gpio->drv0.PE8_DRV = drive_level; break;
+            case 9:  gpio->drv0.PE9_DRV = drive_level; break;
+            case 10: gpio->drv0.PE10_DRV = drive_level; break;
+            case 11: gpio->drv0.PE11_DRV = drive_level; break;
+            case 12: gpio->drv0.PE12_DRV = drive_level; break;
+            case 13: gpio->drv0.PE13_DRV = drive_level; break;
+            case 14: gpio->drv0.PE14_DRV = drive_level; break;
+            case 15: gpio->drv0.PE15_DRV = drive_level; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_F) {
+        struct gpio_group_F *gpio = (struct gpio_group_F *)GPIO_F_BASE;
+        switch (pin) {
+            case 0: gpio->drv0.PF0_DRV = drive_level; break;
+            case 1: gpio->drv0.PF1_DRV = drive_level; break;
+            case 2: gpio->drv0.PF2_DRV = drive_level; break;
+            case 3: gpio->drv0.PF3_DRV = drive_level; break;
+            case 4: gpio->drv0.PF4_DRV = drive_level; break;
+            case 5: gpio->drv0.PF5_DRV = drive_level; break;
+            case 6: gpio->drv0.PF6_DRV = drive_level; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_G) {
+        struct gpio_group_G *gpio = (struct gpio_group_G *)GPIO_G_BASE;
+        switch (pin) {
+            case 0:  gpio->drv0.PG0_DRV = drive_level; break;
+            case 1:  gpio->drv0.PG1_DRV = drive_level; break;
+            case 2:  gpio->drv0.PG2_DRV = drive_level; break;
+            case 3:  gpio->drv0.PG3_DRV = drive_level; break;
+            case 4:  gpio->drv0.PG4_DRV = drive_level; break;
+            case 5:  gpio->drv0.PG5_DRV = drive_level; break;
+            case 6:  gpio->drv0.PG6_DRV = drive_level; break;
+            case 7:  gpio->drv0.PG7_DRV = drive_level; break;
+            case 8:  gpio->drv0.PG8_DRV = drive_level; break;
+            case 9:  gpio->drv0.PG9_DRV = drive_level; break;
+            case 10: gpio->drv0.PG10_DRV = drive_level; break;
+            case 11: gpio->drv0.PG11_DRV = drive_level; break;
+            case 12: gpio->drv0.PG12_DRV = drive_level; break;
+            case 13: gpio->drv0.PG13_DRV = drive_level; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    if (group == GPIO_GROUP_L) {
+        struct gpio_group_L *gpio = (struct gpio_group_L *)GPIO_L_BASE;
+        switch (pin) {
+            case 0:  gpio->drv0.PL0_DRV = drive_level; break;
+            case 1:  gpio->drv0.PL1_DRV = drive_level; break;
+            case 2:  gpio->drv0.PL2_DRV = drive_level; break;
+            case 3:  gpio->drv0.PL3_DRV = drive_level; break;
+            case 4:  gpio->drv0.PL4_DRV = drive_level; break;
+            case 5:  gpio->drv0.PL5_DRV = drive_level; break;
+            case 6:  gpio->drv0.PL6_DRV = drive_level; break;
+            case 7:  gpio->drv0.PL7_DRV = drive_level; break;
+            case 8:  gpio->drv0.PL8_DRV = drive_level; break;
+            case 9:  gpio->drv0.PL9_DRV = drive_level; break;
+            case 10: gpio->drv0.PL10_DRV = drive_level; break;
+            case 11: gpio->drv0.PL11_DRV = drive_level; break;
+            default: return -1;
+        }
+        return 0;
+    }
+
+    return -1;
+}
+
+// 写针脚输出电平，成功返回0，失败返回-1
+int32_t write_pin(uint32_t group, uint32_t pin, uint32_t value) {
+    // 第一步：检查 group 和 pin 是否有效
+    if (gpio_pin_valid((gpio_group_t)group, pin) == 0) {
+        return -1;
+    }
+
+    // 第二步：GPIO 电平值只能是 0 或 1
+    if (value != 0 && value != 1) {
+        return -1;
+    }
+
+    // 第三步：写之前，先强制把这个 pin 修正成输出模式
+    // 这样调用者就不用额外先 configure 成输出了
+    if (gpio_set_function((gpio_group_t)group, pin, GPIO_PIN_FUNC_OUTPUT) != 0) {
+        return -1;
+    }
+
+    // 第四步：找到对应 GPIO 组的数据寄存器地址
+    //
+    // 注意这里不是取整个 group 的首地址，而是取 group 结构体里面 dat 这个成员的地址。
+    // 例如 A 组：
+    //   struct gpio_group_A {
+    //       ...
+    //       PA_DATA_REG_t dat;
+    //       ...
+    //   };
+    //
+    // 我们把 &gpio->dat 转成 uint32_t *，这样就能把这个数据寄存器当作一个 32 位整数来处理。
+    volatile uint32_t *dat_reg = NULL;
+
+    if (group == GPIO_GROUP_A) {
+        struct gpio_group_A *gpio = (struct gpio_group_A *)GPIO_A_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_C) {
+        struct gpio_group_C *gpio = (struct gpio_group_C *)GPIO_C_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_D) {
+        struct gpio_group_D *gpio = (struct gpio_group_D *)GPIO_D_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_E) {
+        struct gpio_group_E *gpio = (struct gpio_group_E *)GPIO_E_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_F) {
+        struct gpio_group_F *gpio = (struct gpio_group_F *)GPIO_F_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_G) {
+        struct gpio_group_G *gpio = (struct gpio_group_G *)GPIO_G_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_L) {
+        struct gpio_group_L *gpio = (struct gpio_group_L *)GPIO_L_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else {
+        return -1;
+    }
+
+    // 第五步：构造“只作用于某一位”的掩码 mask
+    //
+    // 例如：
+    //   pin = 0  => mask = 00000001b
+    //   pin = 1  => mask = 00000010b
+    //   pin = 2  => mask = 00000100b
+    //   pin = 5  => mask = 00100000b
+    //
+    // 写法：
+    //   1U << pin
+    //
+    // 解释：
+    //   1U 的二进制一开始是：
+    //       00000000 00000000 00000000 00000001
+    //
+    //   如果 pin = 3，左移 3 位后变成：
+    //       00000000 00000000 00000000 00001000
+    //
+    //   这就表示“第 3 位的位置上是 1，其余位都是 0”
+    //
+    // 这个东西就叫掩码。它只选中目标 pin，对其他 pin 没影响。
+    uint32_t mask = (1U << pin);
+
+    // 第六步：根据 value 决定是置 1 还是清 0
+    if (value == 1) {
+        // -----------------------------
+        // 要把某一位写成 1，用按位或：|
+        // -----------------------------
+        //
+        // 公式：
+        //   新值 = 旧值 | mask
+        //
+        // 因为按位或的规则是：
+        //   0 | 0 = 0
+        //   0 | 1 = 1
+        //   1 | 0 = 1
+        //   1 | 1 = 1
+        //
+        // 也就是说，只要 mask 的目标位是 1，
+        // 那么旧值这一位不管原来是 0 还是 1，结果都会变成 1。
+        //
+        // 举例：
+        //   假设当前寄存器值是：
+        //       00010010
+        //   现在 pin = 2
+        //   那么 mask = 00000100
+        //
+        //   做按位或：
+        //       00010010
+        //     | 00000100
+        //     = 00010110
+        //
+        // 可以看到第 2 位被写成 1 了，其他位保持不变。
+        *dat_reg = (*dat_reg) | mask;
+    } else {
+        // -----------------------------------------
+        // 要把某一位写成 0，先把 mask 取反，再按位与：&
+        // -----------------------------------------
+        //
+        // 先看 mask：
+        //   假设 pin = 2
+        //   mask = 00000100
+        //
+        // 把它按位取反 ~mask：
+        //   ~mask = 11111011
+        //
+        // 然后做：
+        //   新值 = 旧值 & (~mask)
+        //
+        // 因为按位与的规则是：
+        //   0 & 0 = 0
+        //   0 & 1 = 0
+        //   1 & 0 = 0
+        //   1 & 1 = 1
+        //
+        // 也就是说：
+        //   - 目标位由于 ~mask 那一位是 0，所以结果一定变成 0
+        //   - 其他位由于 ~mask 那些位都是 1，所以原值会被保留下来
+        //
+        // 举例：
+        //   假设当前寄存器值是：
+        //       00010110
+        //   pin = 2
+        //   mask =    00000100
+        //   ~mask =   11111011
+        //
+        //   做按位与：
+        //       00010110
+        //     & 11111011
+        //     = 00010010
+        //
+        // 可以看到第 2 位被清成 0，其他位不变。
+        *dat_reg = (*dat_reg) & (~mask);
+    }
+
+    return 0;
+}
+
+// 读取针脚输入电平，成功返回0或1，失败返回-1
+int32_t read_pin(uint32_t group, uint32_t pin) {
+    // 第一步：检查 group 和 pin 是否有效
+    if (gpio_pin_valid((gpio_group_t)group, pin) == 0) {
+        return -1;
+    }
+
+    // 第二步：读取之前，先统一修正成输入模式
+    if (gpio_set_function((gpio_group_t)group, pin, GPIO_PIN_FUNC_INPUT) != 0) {
+        return -1;
+    }
+
+    // 第三步：拿到对应组的数据寄存器地址
+    volatile uint32_t *dat_reg = NULL;
+
+    if (group == GPIO_GROUP_A) {
+        struct gpio_group_A *gpio = (struct gpio_group_A *)GPIO_A_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_C) {
+        struct gpio_group_C *gpio = (struct gpio_group_C *)GPIO_C_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_D) {
+        struct gpio_group_D *gpio = (struct gpio_group_D *)GPIO_D_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_E) {
+        struct gpio_group_E *gpio = (struct gpio_group_E *)GPIO_E_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_F) {
+        struct gpio_group_F *gpio = (struct gpio_group_F *)GPIO_F_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_G) {
+        struct gpio_group_G *gpio = (struct gpio_group_G *)GPIO_G_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else if (group == GPIO_GROUP_L) {
+        struct gpio_group_L *gpio = (struct gpio_group_L *)GPIO_L_BASE;
+        dat_reg = (volatile uint32_t *)&(gpio->dat);
+    } else {
+        return -1;
+    }
+
+    // 第四步：把目标 pin 那一位“移动到最低位”
+    //
+    // 这里用到右移：
+    //   (*dat_reg) >> pin
+    //
+    // 假设当前寄存器值是：
+    //   00101100
+    //
+    // 如果 pin = 3
+    // 那么我们关心的是“第 3 位”
+    //
+    // 右移 3 位后：
+    //   00101100 >> 3 = 00000101
+    //
+    // 原本第 3 位，就被移动到了最低位 bit0 的位置。
+    //
+    // 但这时候高位还残留着别的信息，我们还要再做一步筛选。
+    uint32_t shifted_value = (*dat_reg) >> pin;
+
+    // 第五步：只取最低位
+    //
+    // 方法是跟 0x1 做按位与：
+    //   result = shifted_value & 0x1
+    //
+    // 0x1 的二进制是：
+    //   00000001
+    //
+    // 按位与之后：
+    //   - 只有最低位会被保留
+    //   - 其他位全部清零
+    //
+    // 举例：
+    //   shifted_value = 00000101
+    //   0x1          = 00000001
+    //
+    //   做按位与：
+    //      00000101
+    //    & 00000001
+    //    = 00000001
+    //
+    // 结果就是 1，表示这个 pin 当前是高电平。
+    //
+    // 如果 shifted_value = 00000100
+    // 那么：
+    //      00000100
+    //    & 00000001
+    //    = 00000000
+    //
+    // 结果就是 0，表示这个 pin 当前是低电平。
+    uint32_t result = shifted_value & 0x1U;
+
+    return (int32_t)result;
+}
+
+// 配置单个 GPIO pin
+int32_t configure(void *config) {
+    struct gpio_config *cfg = (struct gpio_config *)config;
+
+    // 第一步：空指针检查
+    if (cfg == NULL) {
+        return -1;
+    }
+
+    // 第二步：检查 pin 是否有效
+    if (gpio_pin_valid(cfg->group, cfg->pin) == 0) {
+        return -1;
+    }
+
+    // 第三步：检查功能模式范围
+    if (cfg->function > GPIO_PIN_FUNC_DISABLE) {
+        return -1;
+    }
+
+    // 第四步：检查上下拉范围
+    if (cfg->pull > GPIO_PULL_DOWN) {
+        return -1;
+    }
+
+    // 第五步：检查驱动能力范围
+    if (cfg->drive_level > GPIO_DRIVE_LEVEL3) {
+        return -1;
+    }
+
+    // 第六步：检查初始输出值范围
+    // -1 表示“不处理初始输出值”
+    // 0 表示“如果是输出，就初始化为低电平”
+    // 1 表示“如果是输出，就初始化为高电平”
+    if (cfg->init_value < -1 || cfg->init_value > 1) {
+        return -1;
+    }
+
+    // 第七步：配置功能模式
+    if (gpio_set_function(cfg->group, cfg->pin, cfg->function) != 0) {
+        return -1;
+    }
+
+    // 第八步：配置上下拉
+    if (gpio_set_pull(cfg->group, cfg->pin, cfg->pull) != 0) {
+        return -1;
+    }
+
+    // 第九步：配置驱动能力
+    if (gpio_set_drive_level(cfg->group, cfg->pin, cfg->drive_level) != 0) {
+        return -1;
+    }
+
+    // 第十步：如果调用者要求设置初始输出值，并且当前模式是输出模式，就补一次 write_pin
+    if ((cfg->init_value == 0 || cfg->init_value == 1) &&
+        (cfg->function == GPIO_PIN_FUNC_OUTPUT)) {
+        if (write_pin(cfg->group, cfg->pin, (uint32_t)cfg->init_value) != 0) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
