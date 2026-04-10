@@ -59,6 +59,6 @@ irq_handler:
 
     pop     {r0-r12}            // 恢复其他上下文
 
-
-    cpsie i                     // 启用IRQ中断
+    // 此处不需要打开IRQ中断，CPSR被恢复后，IRQ中断已经打开了，恢复中断处理前的状态
+    // cpsie i                     // 启用IRQ中断
     subs    pc, lr, #4          // 返回中断前的位置（CPU会自动恢复spsr_irq到cpsr）

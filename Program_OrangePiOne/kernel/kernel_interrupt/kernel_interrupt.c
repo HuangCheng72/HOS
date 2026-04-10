@@ -221,6 +221,9 @@ bool add_interrupt_handler(uint32_t interrupt_id, void (*handler)(void), uint8_t
         // 这里主要就是清除对应的奇数位的1就行了，用按位取反后位与即可解决
         GICD_ICFGR[reg_idx] &= (~(1 << (bit_idx * 2 + 1)));
     }
+    // 注册成功直接启用中断
+    enable_gic_irq_interrupt(interrupt_id);
+
     return true;
 }
 
@@ -229,44 +232,46 @@ bool remove_interrupt_handler(uint32_t interrupt_id) {
     if(interrupt_id > 1019) {
         return false;
     }
+    disable_gic_irq_interrupt(interrupt_id);
     interrupt_handler_functions[interrupt_id] = NULL;
+
     return (bool)(interrupt_handler_functions[interrupt_id] == NULL);
 }
 
 // 禁用GIC指定的中断
-void disable_gic_irq_interrupt(uint8_t irq) {
+void disable_gic_irq_interrupt(uint32_t irq) {
     uint32_t reg_index = irq / 32;
     uint32_t bit_offset = irq % 32;
 
     // GICD_ICENABLER: 中断禁用寄存器（写1禁用）
     volatile uint32_t *GICD_ICENABLER_REG = GICD_ICENABLER + reg_index;
     // GICD_ISENABLER: 中断启用寄存器
-    volatile uint32_t *GICD_ISENABLER_REG = GICD_ISENABLER + reg_index;
+//    volatile uint32_t *GICD_ISENABLER_REG = GICD_ISENABLER + reg_index;
 
     // 写1到对应位禁用中断（用位或防止干扰其他）
     *GICD_ICENABLER_REG |= (1 << bit_offset);
 
-    // 确保启用寄存器中该位被清除（读取-修改-写入）
-    uint32_t enable_reg_value = *GICD_ISENABLER_REG;
-    enable_reg_value &= ~(1 << bit_offset);
-    *GICD_ISENABLER_REG = enable_reg_value;
+    // 确保启用寄存器中该位被清除（读取-修改-写入）（这两个寄存器的状态更改是硬件完成的，不需要手工互斥）
+//    uint32_t enable_reg_value = *GICD_ISENABLER_REG;
+//    enable_reg_value &= ~(1 << bit_offset);
+//    *GICD_ISENABLER_REG = enable_reg_value;
 }
 
 // 启用GIC指定的中断
-void enable_gic_irq_interrupt(uint8_t irq) {
+void enable_gic_irq_interrupt(uint32_t irq) {
     uint32_t reg_index = irq / 32;
     uint32_t bit_offset = irq % 32;
 
     // GICD_ISENABLER: 中断启用寄存器（写1启用）
     volatile uint32_t *GICD_ISENABLER_REG = GICD_ISENABLER + reg_index;
     // GICD_ICENABLER: 中断禁用寄存器
-    volatile uint32_t *GICD_ICENABLER_REG = GICD_ICENABLER + reg_index;
+//    volatile uint32_t *GICD_ICENABLER_REG = GICD_ICENABLER + reg_index;
 
     // 写1到对应位启用中断（用位或防止干扰其他）
     *GICD_ISENABLER_REG |= (1 << bit_offset);
 
-    // 确保禁用寄存器中该位被清除（读取-修改-写入）
-    uint32_t disable_reg_value = *GICD_ICENABLER_REG;
-    disable_reg_value &= ~(1 << bit_offset);
-    *GICD_ICENABLER_REG = disable_reg_value;
+    // 确保禁用寄存器中该位被清除（读取-修改-写入）（这两个寄存器的状态更改是硬件完成的，不需要手工互斥）
+//    uint32_t disable_reg_value = *GICD_ICENABLER_REG;
+//    disable_reg_value &= ~(1 << bit_offset);
+//    *GICD_ICENABLER_REG = disable_reg_value;
 }

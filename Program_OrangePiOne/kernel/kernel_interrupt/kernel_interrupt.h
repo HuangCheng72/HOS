@@ -41,8 +41,8 @@ bool add_interrupt_handler(uint32_t interrupt_id, void (*handler)(void), uint8_t
 // 删除中断处理函数，参数为中断号
 bool remove_interrupt_handler(uint32_t interrupt_id);
 // 启用GIC指定的中断
-void enable_gic_irq_interrupt(uint8_t irq);
+void enable_gic_irq_interrupt(uint32_t irq);
 // 禁用GIC指定的中断
-void disable_gic_irq_interrupt(uint8_t irq);
+void disable_gic_irq_interrupt(uint32_t irq);
 
 #endif //HOS_INTERRUPT_H
