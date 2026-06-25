@@ -278,6 +278,7 @@ void task_block(enum task_status stat) {
                  "ldr   r12, =0xc0008080\n"
                  "str   sp, [r12]\n"
                  "ldr   sp, =0xc0007800\n"
+                 : : : "r12", "memory"
     );
 
     // 关闭中断，保存先前状态
@@ -369,6 +370,7 @@ void task_yield() {
                  "ldr   r12, =0xc0008080\n"
                  "str   sp, [r12]\n"
                  "ldr   sp, =0xc0007800\n"
+                 : : : "r12", "memory"
     );
 
     // 关闭中断，防止任务切换过程中出现竞态条件
