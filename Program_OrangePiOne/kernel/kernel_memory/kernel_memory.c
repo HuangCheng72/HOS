@@ -236,7 +236,7 @@ void *remove_page_mapping(uint32_t virtual_address) {
     // 检查页表中是否还有有效的页表项
     uint8_t page_table_empty = 1;
     for (int i = 0; i < 1024; i++) {
-        if (page_table[i].PageType || pte->BaseAddress) {
+        if (page_table[i].PageType || page_table[i].BaseAddress) {
             // 任何一个有都说明有效
             page_table_empty = 0;
             break;
